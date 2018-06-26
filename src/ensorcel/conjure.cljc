@@ -50,6 +50,12 @@
     (internal-server-error! (s/explain-str returns result)))
   (or result {:status :success}))
 
+(defn validate-spec
+  [service endpoints]
+  (when-not (every? (set (map (comp keyword :endpoint-name) endpoints)) (keys service))
+    (throw (ex-info "Spec only partially defined"
+           {:spec service}))))
+
 (defn assert-arglist-length
   [arglists]
   (when-not (empty? arglists)
@@ -81,7 +87,9 @@
 
 (defmacro def-service [service-name spells & defns]
   (let [service ((eval spells) (keyword service-name))
-        endpoints (map (comp create-endpoint (partial extract-defn service)) defns)]
+        specs (map (partial extract-defn service) defns)
+        endpoints (map create-endpoint specs)]
+    (validate-spec service specs)
     `(def ~service-name
        (context ~(str "/" service-name) []
                 ~@endpoints))))
@@ -101,7 +109,6 @@
 
 (defn get-things
   []
-  (println "Getting things!")
   [{:email "lukeluke.com" :name "luke"}])
 
 (defn new-thing
