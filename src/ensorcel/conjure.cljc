@@ -10,7 +10,7 @@
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.http-response :refer [wrap-http-response]]
             [ring.middleware.json :refer [wrap-json-params wrap-json-response]]
-            [ring.util.http-response :refer [bad-request!]]))
+            [ring.util.http-response :refer [bad-request! internal-server-error!]]))
 
 (extend-protocol Renderable
   clojure.lang.APersistentMap
@@ -39,10 +39,16 @@
    :POST 'POST})
 
 (defn validate-params
-  [expected received]
-  (when-let [err (and expected (s/explain-str expected received))]
-    (println expected received)
-    (bad-request! err)))
+  [received expected]
+  (when (and expected (s/invalid? (s/conform expected received)))
+    (bad-request! (s/explain-str expected received)))
+  received)
+
+(defn validate-result
+  [returns result]
+  (when (and returns (s/invalid? (s/conform returns result)))
+    (internal-server-error! (s/explain-str returns result)))
+  (or result {:status :success}))
 
 (defn assert-arglist-length
   [arglists]
@@ -53,20 +59,17 @@
   [arg-count {:keys [params cookies]} expected-params endpoint]
   (if (zero? arg-count)
     (endpoint)
-    (do (validate-params expected-params params)
-        (endpoint (assoc params :_cookies cookies)))))
+    (-> params
+        (validate-params expected-params)
+        (assoc :_cookies cookies)
+        endpoint)))
 
 (defn create-endpoint
   [{:keys [endpoint-name method params returns endpoint]}]
   (let [arg-count (assert-arglist-length (:arglists (meta (resolve endpoint))))]
     `(~(method->fn method) ~(str "/" endpoint-name) []
-                 (fn [req#] (wrap-endpoint ~arg-count req# ~params ~endpoint)))))
-
-(defmacro create-service
-  [service-name endpoint-specs]
-  (let [endpoints (map create-endpoint endpoint-specs)]
-    `(context ~(str "/" service-name) []
-              ~@endpoints)))
+                 (fn [req#]
+                   (validate-result ~returns (wrap-endpoint ~arg-count req# ~params ~endpoint))))))
 
 (defn extract-defn
   [service api-fun]
@@ -88,7 +91,7 @@
 (def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
 (s/def ::email (s/and string? #(re-matches email-regex %)))
 (s/def ::name string?)
-(s/def ::thing (s/keys :req [::name ::email]))
+(s/def ::thing (s/keys :req-un [::name ::email]))
 
 (def spec
   {:things {:get-things {:method :GET
@@ -99,7 +102,7 @@
 (defn get-things
   []
   (println "Getting things!")
-  [{:email "luke@luke.com" :name "luke"}])
+  [{:email "lukeluke.com" :name "luke"}])
 
 (defn new-thing
   [{:keys [email name]}]
