@@ -12,4 +12,5 @@
                  [ring-cors "0.1.12"]
                  [ring/ring-json "0.4.0"]
                  [metosin/ring-http-response "0.9.0"]]
-  :jvm-opts ["--add-modules" "java.xml.bind"])
+  :jvm-opts ["--add-modules" "java.xml.bind"]
+  :source-paths ["src/clj"])
