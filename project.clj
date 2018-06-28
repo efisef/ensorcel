@@ -20,35 +20,28 @@
   :jvm-opts ["--add-modules" "java.xml.bind"]
   :source-paths ["src/clj"]
 
-  :plugins [[lein-figwheel "0.5.16"]
-            [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
+  :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
 
-  :cljsbuild {:builds
+  :cljsbuild {:test-commands {"my-test" ["phantomjs"
+                                         "phantom/unit-test.js"
+                                         "resources/private/html/unit-test.html"]}
+              :builds
               [{:id "dev"
                 :source-paths ["src/cljs"]
-
-                :figwheel {:on-jsload "ensorcel.core/on-js-reload"
-                           :open-urls ["http://localhost:3449/index.html"]}
-
                 :compiler {:main ensorcel.core
                            :asset-path "js/compiled/out"
                            :output-to "resources/public/js/compiled/ensorcel.js"
                            :output-dir "resources/public/js/compiled/out"
                            :source-map-timestamp true
                            :preloads [devtools.preload]}}
+               {:id "test"
+                :source-paths ["src/cljs" "test/cljs"]
+                :compiler {:output-to "resources/private/js/unit-test.js"
+                           :optimizations :whitespace
+                           :pretty-print true}}
                {:id "min"
                 :source-paths ["src"]
                 :compiler {:output-to "resources/public/js/compiled/ensorcel.js"
                            :main ensorcel.core
                            :optimizations :advanced
-                           :pretty-print false}}]}
-
-  :figwheel {:css-dirs ["resources/public/css"]}
-
-  :profiles {:dev {:dependencies [[binaryage/devtools "0.9.9"]
-                                  [figwheel-sidecar "0.5.16"]
-                                  [cider/piggieback "0.3.1"]]
-                   :source-paths ["src" "dev"]
-                   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
-                   :clean-targets ^{:protect false} ["resources/public/js/compiled"
-                                                     :target-path]}})
+                           :pretty-print false}}]})
