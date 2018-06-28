@@ -1,1 +1,0 @@
-{"version":3,"file":"\/home\/tetigi\/git\/ensorcel\/resources\/public\/js\/compiled\/out\/devtools\/version.js","sources":["version.cljs?rel=1530194906024"],"lineCount":9,"mappings":";AAAA;;AAGA,AAAKA,mCAAgB;AAErB,uCAAA,vCAAMC;AAAN,AACED","names":["devtools.version\/current-version","devtools.version\/get-current-version"]}
