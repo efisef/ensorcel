@@ -1,0 +1,19 @@
+Notifying browser that CSS file changed: resources/public/css/style.css
+Compiling build :dev to "resources/public/js/compiled/ensorcel.js" from ["src/cljs"]...
+[36m----  Compiler Warning on   resources/public/js/compiled/out/cognitect/transit.cljs   line:332  column:1  ----[0m
+
+  [1muri? already refers to: cljs.core/uri? being replaced by: cognitect.transit/uri?[0m
+
+  [36m328[0m  [36m  "Construct a URI from a string."[0m
+  [36m329[0m  [36m  [s][0m
+  [36m330[0m  [36m  (ty/uri s))[0m
+  [36m331[0m  [36m[0m
+  [33m332[0m  [1m(defn uri?[0m
+  [0m   [0m  [33m^--- uri? already refers to: cljs.core/uri? being replaced by: cognitect.transit/uri?[0m
+  [36m333[0m  [36m  "Returns true if x is a transit URI value, false otherwise."[0m
+  [36m334[0m  [36m  [x][0m
+  [36m335[0m  [36m  (ty/isURI x))[0m
+  [36m336[0m  [36m[0m
+  [36m337[0m  [36m(defn uuid[0m
+
+[36m----  Compiler Warning : Please see resources/public/js/compiled/out/cognitect/transit.cljs  ----[0m
