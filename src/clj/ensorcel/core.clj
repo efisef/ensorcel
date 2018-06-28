@@ -1,5 +1,6 @@
 (ns ensorcel.core
   (:require [clojure.spec.alpha :as s]
+            [spec-tools.core :as st]
             [org.httpkit.server :refer [run-server]]
             [ensorcel.conjure :as conjure]
             [ensorcel.server :as server]
