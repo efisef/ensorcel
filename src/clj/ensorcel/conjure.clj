@@ -1,11 +1,7 @@
 (ns ensorcel.conjure
   (:require [clojure.spec.alpha :as s]
-            [ring.util.http-response :refer [bad-request! internal-server-error!]]
-            [compojure.core :refer [GET POST DELETE context]]))
-
-(def method->fn
-  {:GET 'GET
-   :POST 'POST})
+            [clojure.string :as string]
+            [ring.util.http-response :refer [ok bad-request! internal-server-error!]]))
 
 (defn validate-params
   [received expected]
@@ -14,52 +10,31 @@
   received)
 
 (defn validate-result
-  [returns result]
+  [result returns]
   (when (and returns (s/invalid? (s/conform returns result)))
     (internal-server-error! (s/explain-str returns result)))
   (or result {:status :success}))
 
-(defn validate-spec
-  [service endpoints]
-  (when-not (every? (set (map (comp keyword :endpoint-name) endpoints)) (keys service))
-    (throw (ex-info "Spec only partially defined"
-           {:spec service}))))
-
-(defn assert-arglist-length
-  [arglists]
-  (when-not (empty? arglists)
-    (apply min (map count arglists))))
-
 (defn wrap-endpoint
-  [arg-count {:keys [params cookies]} expected-params endpoint]
-  (if (zero? arg-count)
-    (endpoint)
-    (-> params
-        (validate-params expected-params)
-        (assoc :_cookies cookies)
-        endpoint)))
+  [{:keys [params method returns response] :or {response ok}} f]
+  (fn [req]
+    (-> req
+        :params
+        (validate-params params)
+        (assoc :_cookies (:cookies params))
+        f
+        (validate-result returns)
+        response)))
 
-(defn create-endpoint
-  [{:keys [endpoint-name method params returns endpoint]}]
-  (let [arg-count (assert-arglist-length (:arglists (meta (resolve endpoint))))]
-    `(~(method->fn method) ~(str "/" endpoint-name) []
-                 (fn [req#]
-                   (validate-result ~returns (wrap-endpoint ~arg-count req# ~params ~endpoint))))))
+(defn endpoint
+  [impls [endpoint spec]]
+  (when-not (impls endpoint)
+    (throw (ex-info "Spec only partially defined" {:missing endpoint})))
+  (let [impl (impls endpoint)]
+    [(:path spec) (wrap-endpoint spec impl)]))
 
-(defn extract-defn
-  [service api-fun]
-  (let [fname (eval (name api-fun))
-        spec (service (keyword fname))]
-    (assoc spec
-           :endpoint-name fname
-           :endpoint api-fun)))
-
-(defmacro def-service [service-name spells & defns]
-  (let [service ((eval spells) (keyword service-name))
-        specs (map (partial extract-defn service) defns)
-        endpoints (map create-endpoint specs)]
-    (validate-spec service specs)
-    `(def ~service-name
-       (context ~(str "/" service-name) []
-                ~@endpoints))))
-
+(defn service
+  [{:keys [path endpoints]} & impls]
+  (let [endpoint-impls (apply hash-map impls)
+        endpoints (into {} (map (partial endpoint endpoint-impls) endpoints))]
+    {(str path "/") endpoints}))
