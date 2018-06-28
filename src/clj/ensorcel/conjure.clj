@@ -15,14 +15,20 @@
     (internal-server-error! (s/explain-str returns result)))
   (or result {:status :success}))
 
+(defn arg-count [f]
+  {:pre [(instance? clojure.lang.AFunction f)]}
+  (-> f class .getDeclaredMethods first .getParameterTypes alength))
+
 (defn wrap-endpoint
   [{:keys [params method returns response] :or {response ok}} f]
   (fn [req]
-    (-> req
-        :params
-        (validate-params params)
-        (assoc :_cookies (:cookies params))
-        f
+    (-> (if (zero? (arg-count f))
+          (f)
+          (-> req
+              :params
+              (validate-params params)
+              (assoc :_cookies (:cookies params))
+              f))
         (validate-result returns)
         response)))
 

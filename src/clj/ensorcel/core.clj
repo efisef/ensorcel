@@ -24,7 +24,7 @@
                                      :params ::thing}}}})
 
 (defn get-things
-  [_]
+  []
   [{:email "luke@luke.com" :name "luke"}])
 
 (defn get-thing
