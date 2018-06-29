@@ -18,7 +18,8 @@
                  [org.clojure/clojurescript "1.10.238"]
                  [cljs-http "0.1.45"]]
   :jvm-opts ["--add-modules" "java.xml.bind"]
-  :source-paths ["src/clj"]
+  :source-paths ["src/clj"
+                 "src/cljc"]
 
   :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
 
@@ -27,7 +28,8 @@
                                          "resources/private/html/unit-test.html"]}
               :builds
               [{:id "dev"
-                :source-paths ["src/cljs"]
+                :source-paths ["src/cljs"
+                               "src/cljc"]
                 :compiler {:main ensorcel.core
                            :asset-path "js/compiled/out"
                            :output-to "resources/public/js/compiled/ensorcel.js"
