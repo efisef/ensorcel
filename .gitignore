@@ -24,3 +24,4 @@ pom.xml
 /out/
 .repl
 .rebel_readline_history
+/resources/private

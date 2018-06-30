@@ -16,12 +16,14 @@
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [metosin/spec-tools "0.7.1"]
                  [org.clojure/clojurescript "1.10.238"]
-                 [cljs-http "0.1.45"]]
-  :jvm-opts ["--add-modules" "java.xml.bind"]
+                 [cljs-http "0.1.45"]
+                 [quantum/org.clojure.core.rrb-vector "0.0.12"]]
   :source-paths ["src/clj"
                  "src/cljc"]
 
-  :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
+  :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]
+                                                 [org.clojure/core.rrb-vector]]]
+            [lein-doo "0.1.10" :exclusions [[org.clojure/core.rrb-vector]]]]
 
   :cljsbuild {:test-commands {"my-test" ["phantomjs"
                                          "phantom/unit-test.js"
@@ -39,6 +41,7 @@
                {:id "test"
                 :source-paths ["src/cljs" "test/cljs"]
                 :compiler {:output-to "resources/private/js/unit-test.js"
+                           :main ensorcel.test
                            :optimizations :whitespace
                            :pretty-print true}}
                {:id "min"

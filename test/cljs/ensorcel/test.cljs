@@ -1,11 +1,6 @@
 (ns ensorcel.test
-  (:require [cljs.test :refer-macros [deftest is testing run-tests]]))
+  (:require [doo.runner :refer-macros  [doo-tests]]
+            [ensorcel.conjure-test]))
 
-(deftest my-test
-  (is (not= 1 1)))
+(doo-tests 'ensorcel.conjure-test)
 
-(defn ^:export run
-  []
-  (.log js/console "Example test started.")
-  (run-tests)
-  0)

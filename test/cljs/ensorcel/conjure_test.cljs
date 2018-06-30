@@ -1,8 +1,7 @@
 (ns ensorcel.conjure-test
   (:require [cljs.test :refer-macros [deftest
                                       is
-                                      testing
-                                      throws?]]
+                                      testing]]
             [cljs.spec.alpha :as s]))
 
 (deftest test-format-path
@@ -12,8 +11,8 @@
     (is (= ["foo" "bar"] (format-path {:1 "foo" :3 "baz"} [:1 "bar"]))))
   (testing "works with duplicated params"
     (is (= ["foo" "bar" "foo"] (format-path {:1 "foo" :3 "baz"} [:1 "bar" :1]))))
-  (testing "throws if missing arg"
-    (is (throws? RuntimeException (format-path {} [:1 "bar"])))))
+  (testing "thrown if missing arg"
+    (is (thrown? RuntimeException (format-path {} [:1 "bar"])))))
 
 (deftest test-path-fn
   (testing "static path"
@@ -28,8 +27,8 @@
     (is (nil? ((body-fn nil))))
     (is (nil? ((body-fn nil) {:some :stuff}))))
   (let [spec (s/keys :req-un [::foo ::bar])]
-    (testing "throws on invalid body"
-      (is (throws? RuntimeException ((body-fn spec) {:not :foo}))))
+    (testing "thrown on invalid body"
+      (is (thrown? RuntimeException ((body-fn spec) {:not :foo}))))
     (testing "removes extra params in body"
       (is (= {:foo 1 :bar 2} ((body-fn spec) {:foo 1 :bar 2 :other 3}))))))
 
