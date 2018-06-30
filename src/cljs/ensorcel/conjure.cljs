@@ -4,7 +4,8 @@
             [cljs.core.async :refer [<!]]
             [cljs.spec.alpha :as s]
             [spec-tools.core :as st]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [ensorcel.spellbook :refer [validate]]))
 
 (defn assemble-call
   [path-fn body-fn method]
@@ -59,11 +60,14 @@
 
 (defn client
   [spellbook service-name]
+  (when-not (validate spellbook)
+    (throw (ex-info "Provided spellbook is invalid" {:provided spellbook})))
   (let [{:keys [path endpoints] :as service} (spellbook service-name)
         base-url (str "http://localhost:3000/api/" path)]
     (wrap (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints)))))
 
 (defn call->
   [call & thens]
+  (println "CALLING")
   (go (let [response (:body (<! (call)))]
         (reduce (fn [acc f] (f acc)) response thens))))
