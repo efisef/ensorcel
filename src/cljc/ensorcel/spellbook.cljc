@@ -13,7 +13,10 @@
                           :opt-un [::params ::returns ::response]))
 (s/def ::endpoints (s/and map? #(every? (partial s/valid? ::endpoint) (vals %))))
 (s/def ::service (s/keys :req-un [::path ::endpoints]))
-(s/def ::spellbook (s/and map? #(every? (partial s/valid? ::service) (vals %))))
+(s/def ::version string?)
+(s/def ::spellbook (s/and (s/keys :req-un [::version])
+                          map?
+                          #(every? (partial s/valid? ::service) (vals (dissoc % :version)))))
 
 (defn validate
   [spellbook]

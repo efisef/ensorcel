@@ -7,6 +7,20 @@
             [ring.middleware.json :refer [wrap-json-params wrap-json-response]]))
 
 
+; ------------------------------- DEFAULT ENDPOINTS -------------------------
+
+(defn- ping
+  []
+  "pong")
+
+(defn- version
+  [version]
+  (fn [] version))
+
+; TODO construct somehow
+
+; ------------------------------ APP ----------------------------------------
+
 (defn root
   [services]
   ["/" {"api/" (apply merge services)}])
