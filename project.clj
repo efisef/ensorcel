@@ -49,4 +49,7 @@
                 :compiler {:output-to "resources/public/js/compiled/ensorcel.js"
                            :main ensorcel.core
                            :optimizations :advanced
-                           :pretty-print false}}]})
+                           :pretty-print false}}]}
+  :profiles {:test {:source-paths ["src/clj" "test/clj"]}}
+
+  )
