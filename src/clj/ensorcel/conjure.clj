@@ -1,19 +1,14 @@
 (ns ensorcel.conjure
   (:require [clojure.spec.alpha :as s]
             [clojure.string :as string]
+            [clojure.data.json :as json]
             [ring.util.http-response :refer [ok bad-request! internal-server-error!]]))
 
-(defn validate-params
-  [received expected]
+(defn validate
+  [received expected raise!]
   (when (and expected (s/invalid? (s/conform expected received)))
-    (bad-request! (s/explain-str expected received)))
+    (raise! (s/explain-str expected received)))
   received)
-
-(defn validate-result
-  [result returns]
-  (when (and returns (s/invalid? (s/conform returns result)))
-    (internal-server-error! (s/explain-str returns result)))
-  (or result {:status :success}))
 
 (defn arg-count [f]
   {:pre [(instance? clojure.lang.AFunction f)]}
@@ -22,15 +17,15 @@
 (defn wrap-endpoint
   [{:keys [params method returns response] :or {response ok}} f]
   (fn [req]
-    (-> (if (zero? (arg-count f))
-          (f)
-          (-> req
-              :params
-              (validate-params params)
-              (assoc :_cookies (:cookies params))
-              f))
-        (validate-result returns)
-        response)))
+    (let [args (arg-count f)
+          input (merge (:params req) (:body req))
+          params (validate input params bad-request!)
+          opts (select-keys req [:cookies])]
+      (-> (cond (zero? args)  (f)
+                (= 1 args)    (f params)
+                :else         (f params opts))
+        (validate returns internal-server-error!)
+        response))))
 
 (defn endpoint
   [impls [endpoint spec]]
@@ -40,7 +35,8 @@
     [(:path spec) (wrap-endpoint spec impl)]))
 
 (defn service
-  [{:keys [path endpoints]} & impls]
-  (let [endpoint-impls (apply hash-map impls)
+  [spellbook service-name & impls]
+  (let [{:keys [path endpoints]} (spellbook service-name)
+        endpoint-impls (apply hash-map impls)
         endpoints (into {} (map (partial endpoint endpoint-impls) endpoints))]
     {(str path "/") endpoints}))

@@ -4,7 +4,7 @@
             [ring.middleware.cors :refer  [wrap-cors]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.http-response :refer [wrap-http-response]]
-            [ring.middleware.json :refer [wrap-json-params wrap-json-response]]))
+            [ring.middleware.json :refer [wrap-json-params wrap-json-body wrap-json-response]]))
 
 
 ; ------------------------------- DEFAULT ENDPOINTS -------------------------
@@ -31,7 +31,7 @@
       (wrap-defaults (assoc api-defaults
                             :params {:keywordize true}
                             :cookies true))
-      wrap-json-params
+      (wrap-json-body {:keywords? true :bigdecimals? true})
       wrap-json-response
       wrap-http-response
       (wrap-cors :access-control-allow-origin  [#"http://localhost:3449"]

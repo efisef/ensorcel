@@ -25,6 +25,8 @@
                                                  [org.clojure/core.rrb-vector]]]
             [lein-doo "0.1.10" :exclusions [[org.clojure/core.rrb-vector]]]]
 
+  :jvm-opts ["--add-modules" "java.xml.bind"]
+
   :cljsbuild {:test-commands {"my-test" ["phantomjs"
                                          "phantom/unit-test.js"
                                          "resources/private/html/unit-test.html"]}
