@@ -50,6 +50,4 @@
                            :main ensorcel.core
                            :optimizations :advanced
                            :pretty-print false}}]}
-  :profiles {:test {:source-paths ["src/clj" "test/clj"]}}
-
-  )
+  :profiles {:test {:source-paths ["src/clj" "test/clj"]}})
