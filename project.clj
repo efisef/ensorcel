@@ -12,6 +12,7 @@
                  [ring/ring-defaults "0.3.2"]
                  [ring-cors "0.1.12"]
                  [ring/ring-json "0.4.0"]
+                 [prismatic/schema "1.1.9"]
 
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [metosin/spec-tools "0.7.1"]
@@ -52,4 +53,8 @@
                            :main ensorcel.core
                            :optimizations :advanced
                            :pretty-print false}}]}
-  :profiles {:test {:source-paths ["src/clj" "test/clj"]}})
+  :profiles {:test {:source-paths ["src/clj" "test/clj"]}
+             :example {:source-paths ["src/clj"
+                                      "src/cljc"
+                                      "example/clj"
+                                      "example/cljc"]}})
