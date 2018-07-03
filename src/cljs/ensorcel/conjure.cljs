@@ -68,6 +68,5 @@
 
 (defn call->
   [call & thens]
-  (println "CALLING")
   (go (let [response (:body (<! (call)))]
         (reduce (fn [acc f] (f acc)) response thens))))
