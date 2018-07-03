@@ -17,8 +17,10 @@
                  [metosin/spec-tools "0.7.1"]
                  [org.clojure/clojurescript "1.10.238"]
                  [cljs-http "0.1.45"]]
+
   :source-paths ["src/clj"
-                 "src/cljc"]
+                 "src/cljc"
+                 "src/cljs"]
 
   :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
             [lein-doo "0.1.10"]]
@@ -41,7 +43,7 @@
                {:id "test"
                 :source-paths ["src/cljs" "test/cljs"]
                 :compiler {:output-to "resources/private/js/unit-test.js"
-                           :main ensorcel.test
+                           ;:main ensorcel.test
                            :optimizations :whitespace
                            :pretty-print true}}
                {:id "min"
