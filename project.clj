@@ -24,7 +24,8 @@
                  "src/cljs"]
 
   :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
-            [lein-doo "0.1.10"]]
+            [lein-doo "0.1.10"]
+            [lein-pprint "1.1.2"]]
 
   :jvm-opts ["--add-modules" "java.xml.bind"]
 
@@ -53,8 +54,4 @@
                            :main ensorcel.core
                            :optimizations :advanced
                            :pretty-print false}}]}
-  :profiles {:test {:source-paths ["src/clj" "test/clj"]}
-             :example {:source-paths ["src/clj"
-                                      "src/cljc"
-                                      "example/clj"
-                                      "example/cljc"]}})
+  :profiles {:test {:source-paths ["src/clj" "test/clj"]}})

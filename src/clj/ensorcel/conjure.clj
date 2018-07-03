@@ -1,5 +1,5 @@
 (ns ensorcel.conjure
-  (:require [clojure.spec.alpha :as s]
+  (:require [schema.core :as s]
             [clojure.string :as string]
             [clojure.data.json :as json]
             [ring.util.http-response :refer [ok bad-request! internal-server-error!]]
@@ -7,8 +7,8 @@
 
 (defn validate
   [received expected raise!]
-  (when (and expected (s/invalid? (s/conform expected received)))
-    (raise! (s/explain-str expected received)))
+  (when (and expected (s/check expected received))
+    (raise! (s/check expected received)))
   received)
 
 (defn arg-count [f]
