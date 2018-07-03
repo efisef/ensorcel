@@ -18,7 +18,10 @@
                           map?
                           #(every? (partial s/valid? ::service) (vals (dissoc % :version)))))
 
-(defn validate
+(defn validate!
   [spellbook]
-  (when (s/valid? ::spellbook spellbook)
-    spellbook))
+  (when-not (s/valid? ::spellbook spellbook)
+    (throw
+      (ex-info "Provided spellbook is invalid" {:provided spellbook
+                                                :explain (s/explain-str ::spellbook spellbook)})))
+    spellbook)

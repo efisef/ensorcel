@@ -2,7 +2,8 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.string :as string]
             [clojure.data.json :as json]
-            [ring.util.http-response :refer [ok bad-request! internal-server-error!]]))
+            [ring.util.http-response :refer [ok bad-request! internal-server-error!]]
+            [ensorcel.spellbook :refer [validate!]]))
 
 (defn validate
   [received expected raise!]
@@ -36,6 +37,7 @@
 
 (defn service
   [spellbook service-name & impls]
+  (validate! spellbook)
   (let [{:keys [path endpoints]} (spellbook service-name)
         endpoint-impls (apply hash-map impls)
         endpoints (into {} (map (partial endpoint endpoint-impls) endpoints))]
