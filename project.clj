@@ -1,4 +1,4 @@
-(defproject efisef/ensorcel "0.1.0-SNAPSHOT"
+(defproject efisef/ensorcel "0.1.0"
   :description "Easier client / server interactions for Clojure[script]"
   :url "https://github.com/efisef/ensorcel"
   :license {:name "Eclipse Public License"
@@ -16,14 +16,12 @@
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [metosin/spec-tools "0.7.1"]
                  [org.clojure/clojurescript "1.10.238"]
-                 [cljs-http "0.1.45"]
-                 [quantum/org.clojure.core.rrb-vector "0.0.12"]]
+                 [cljs-http "0.1.45"]]
   :source-paths ["src/clj"
                  "src/cljc"]
 
-  :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]
-                                                 [org.clojure/core.rrb-vector]]]
-            [lein-doo "0.1.10" :exclusions [[org.clojure/core.rrb-vector]]]]
+  :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
+            [lein-doo "0.1.10"]]
 
   :jvm-opts ["--add-modules" "java.xml.bind"]
 
