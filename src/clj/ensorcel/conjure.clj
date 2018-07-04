@@ -3,7 +3,7 @@
             [clojure.string :as string]
             [clojure.data.json :as json]
             [ring.util.http-response :refer [ok bad-request! internal-server-error!]]
-            [ensorcel.spellbook :refer [validate!]]))
+            [ensorcel.spellbook :refer [validate!] :as sb]))
 
 (defn validate
   [received expected raise!]
@@ -33,7 +33,7 @@
   (when-not (impls endpoint)
     (throw (ex-info "Spec only partially defined" {:missing endpoint})))
   (let [impl (impls endpoint)]
-    [(:path spec) (wrap-endpoint spec impl)]))
+    [(sb/correct-path (:path spec)) (wrap-endpoint spec impl)]))
 
 (defn service
   [spellbook service-name & impls]

@@ -22,3 +22,12 @@
                                      :method (s/enum :GET :POST :PUT :DELETE)
                                      (s/optional-key :args) (s/pred schema?)
                                      (s/optional-key :returns) (s/pred schema?)}}}})
+
+(defn validate
+  [spellbook]
+  (s/validate SpellBook spellbook))
+
+(defn correct-path
+  [path]
+  (cond->> path
+    (vector? path) (interpose "/")))
