@@ -17,13 +17,13 @@
 
 (def SpellBook
   {(s/optional-key :version) version
-   s/Keyword {:path path
-              :endpoints {s/Keyword {:path path
-                                     :method (s/enum :GET :POST :PUT :DELETE)
-                                     (s/optional-key :args) (s/pred schema?)
-                                     (s/optional-key :returns) (s/pred schema?)}}}})
+   :services {s/Keyword {:path path
+                         :endpoints {s/Keyword {:path path
+                                                :method (s/enum :GET :POST :PUT :DELETE)
+                                                (s/optional-key :args) (s/pred schema?)
+                                                (s/optional-key :returns) (s/pred schema?)}}}}})
 
-(defn validate
+(defn validate!
   [spellbook]
   (s/validate SpellBook spellbook))
 

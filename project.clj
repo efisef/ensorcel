@@ -10,7 +10,6 @@
                  [http-kit "2.2.0"]
                  [ring "1.6.3"]
                  [ring/ring-defaults "0.3.2"]
-                 [ring-cors "0.1.12"]
                  [ring/ring-json "0.4.0"]
                  [prismatic/schema "1.1.9"]
 
@@ -24,8 +23,7 @@
                  "src/cljs"]
 
   :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
-            [lein-doo "0.1.10"]
-            [lein-pprint "1.1.2"]]
+            [lein-doo "0.1.10"]]
 
   :jvm-opts ["--add-modules" "java.xml.bind"]
 
