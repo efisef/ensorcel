@@ -3,13 +3,13 @@
             [clojure.data.json :as json]
             [clojure.string :as string]
             [org.httpkit.server :as server]
-            [ring.middleware.cors :refer  [wrap-cors]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.http-response :refer [wrap-http-response]]
             [ring.middleware.json :refer [wrap-json-params wrap-json-body wrap-json-response]]
             [ring.util.http-response :refer [ok bad-request! internal-server-error!]]
             [ring.util.response :as response]
             [schema.core :as s]
+            [schema.coerce :as c]
             [ensorcel.spellbook :refer [validate!] :as sb]))
 
 ; ------------------------------ BIDI ROUTE CONSTRUCTION ----------------------
@@ -19,13 +19,45 @@
   Raises <raise!> if not."
   [received expected raise!]
   (when (and expected (s/check expected received))
-    (raise! (s/check expected received)))
+    (raise! (str (s/check expected received))))
   received)
 
 (defn arg-count [f]
   "Calculates the argument count to <f> by using reflection."
   {:pre [(instance? clojure.lang.AFunction f)]}
   (-> f class .getDeclaredMethods first .getParameterTypes alength))
+
+(def coercions
+ {clojure.lang.Keyword keyword
+  s/Keyword keyword
+  s/Bool #(= "true" (string/lower-case %))
+  s/Int #(Integer/parseInt %)
+  Long #(Long/parseLong %)
+  Double #(Double/parseDouble %)
+  Float #(Float/parseFloat %)})
+
+(defn coerce
+  [value spec]
+  (or ((coercions spec) value) value))
+
+(defn parse-params
+  [params input-spec]
+  (if (seq input-spec)
+    (into {}
+          (for [[k v] params]
+            [k (coerce v (input-spec k))]))
+    params))
+
+(defn construct-input
+  "Given a request and an input spec, coerces the components to the correct types
+  and then validates that everything looks as expected."
+  [{:keys [params body]} input-spec]
+  (let [parsed-params (parse-params params input-spec)
+        input (merge parsed-params body)
+        coercer (if (seq input-spec)
+                  (c/coercer input-spec c/json-coercion-matcher)
+                  identity)]
+    (validate (coercer input) input-spec bad-request!)))
 
 (defn wrap-endpoint
   "Wraps a given endpoint implementation in the gubbins for a ring request
@@ -34,15 +66,14 @@
     1 arity -> provides a parameter map from the request body and url
     2 arity -> provides a parameter map and an options map containing things like cookies etc.
   Also validates that the inputs and outputs match the specification in the spellbook"
-  [{:keys [params method returns response] :or {response ok}} f]
+  [{:keys [params returns response] :or {response ok}} f]
   (fn [req]
     (let [args (arg-count f)
-          input (merge (:params req) (:body req))
-          params (validate input params bad-request!)
+          input (construct-input req params)
           opts (select-keys req [:cookies])]
       (-> (cond (zero? args)  (f)
-                (= 1 args)    (f params)
-                :else         (f params opts))
+                (= 1 args)    (f input)
+                :else         (f input opts))
         (validate returns internal-server-error!)
         response))))
 
