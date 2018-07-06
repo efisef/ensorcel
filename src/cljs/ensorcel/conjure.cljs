@@ -67,6 +67,7 @@
                call)})))
 
 (defn client
+  "Create a REST client for a particular service from a spellbook"
   [{services :services :as spellbook} service-name]
   (validate! spellbook)
   (when-not (services service-name)
@@ -94,6 +95,8 @@
     (parse schema result)))
 
 (defn call->
+  "Calls the endpoint, and if the response is successful, passes the parsed
+  response through to the supplied functions one after the other"
   [{call :call schema :schema} & thens]
   (go (let [response (<! (call))]
         (if (:success response)
