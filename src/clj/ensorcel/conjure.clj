@@ -15,16 +15,25 @@
 ; ------------------------------ BIDI ROUTE CONSTRUCTION ----------------------
 
 (defn validate
+  "Validates that a received payload matches the expected schema.
+  Raises <raise!> if not."
   [received expected raise!]
   (when (and expected (s/check expected received))
     (raise! (s/check expected received)))
   received)
 
 (defn arg-count [f]
+  "Calculates the argument count to <f> by using reflection."
   {:pre [(instance? clojure.lang.AFunction f)]}
   (-> f class .getDeclaredMethods first .getParameterTypes alength))
 
 (defn wrap-endpoint
+  "Wraps a given endpoint implementation in the gubbins for a ring request
+  Different outcomes for different arity implementions:
+    0 arity -> just calls the function
+    1 arity -> provides a parameter map from the request body and url
+    2 arity -> provides a parameter map and an options map containing things like cookies etc.
+  Also validates that the inputs and outputs match the specification in the spellbook"
   [{:keys [params method returns response] :or {response ok}} f]
   (fn [req]
     (let [args (arg-count f)
@@ -38,6 +47,7 @@
         response))))
 
 (defn endpoint
+  "Creates a bidi endpoint from the given impls and an endpoint specification"
   [impls [endpoint spec]]
   (when-not (impls endpoint)
     (throw (ex-info "Spec only partially defined" {:missing endpoint})))
@@ -45,6 +55,7 @@
     [(sb/correct-path (:path spec)) (wrap-endpoint spec impl)]))
 
 (defn service
+  "Creates a bidi service from the given impls and spellbook"
   [spellbook service-name & impls]
   (validate! spellbook)
   (let [{:keys [path endpoints]} (spellbook service-name)
@@ -83,6 +94,7 @@
   ["/" {"api/" (apply merge services)}])
 
 (defn app
+  "Creates a full ring application with default wrappers given a spellbook and conjured services"
   [spellbook & services]
   (sb/validate! spellbook)
   (let [full-services (conj services (ping-service) (version-service spellbook))]
