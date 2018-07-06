@@ -11,6 +11,7 @@
                  [ring "1.6.3"]
                  [ring/ring-defaults "0.3.2"]
                  [ring/ring-json "0.4.0"]
+                 [ring-cors "0.1.12"]
                  [prismatic/schema "1.1.9"]
 
                  [org.clojure/test.check "0.10.0-alpha3"]
@@ -34,12 +35,11 @@
               [{:id "dev"
                 :source-paths ["src/cljs"
                                "src/cljc"]
-                :compiler {:main ensorcel.core
+                :compiler {:main example.client
                            :asset-path "js/compiled/out"
                            :output-to "resources/public/js/compiled/ensorcel.js"
                            :output-dir "resources/public/js/compiled/out"
-                           :source-map-timestamp true
-                           :preloads [devtools.preload]}}
+                           :source-map-timestamp true}}
                {:id "test"
                 :source-paths ["src/cljs" "test/cljs"]
                 :compiler {:output-to "resources/private/js/unit-test.js"
@@ -49,7 +49,7 @@
                {:id "min"
                 :source-paths ["src"]
                 :compiler {:output-to "resources/public/js/compiled/ensorcel.js"
-                           :main ensorcel.core
+                           :main example.client
                            :optimizations :advanced
                            :pretty-print false}}]}
   :profiles {:test {:source-paths ["src/clj" "test/clj"]}})

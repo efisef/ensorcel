@@ -19,6 +19,7 @@
   Raises <raise!> if not."
   [received expected raise!]
   (when (and expected (s/check expected received))
+    (prn received)
     (raise! (str (s/check expected received))))
   received)
 
@@ -138,7 +139,6 @@
   (sb/validate! spellbook)
   (let [full-services (conj services (ping-service) (version-service spellbook))]
     (-> (make-handler (root full-services))
-
         wrap-http-response
         (wrap-json-body {:keywords? true :bigdecimals? true})
         wrap-json-response

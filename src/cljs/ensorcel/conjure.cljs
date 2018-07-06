@@ -2,10 +2,10 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
-            [cljs.spec.alpha :as s]
             [clojure.string :as string]
-            [spec-tools.core :as st]
-            [ensorcel.spellbook :refer [validate!]]))
+            [schema.core :as s]
+            [schema.coerce :as c]
+            [ensorcel.spellbook :refer [validate!] :as sb]))
 
 (defn assemble-call
   [path-fn body-fn method]
@@ -17,6 +17,12 @@
         :GET http/get
         :POST http/post) (path-fn params) opts))))
 
+(defn urlify
+  [value]
+  (cond
+    (keyword? value) (name value)
+    :else value))
+
 (defn format-path
   [values [f & fragments]]
   (if (nil? f)
@@ -24,7 +30,7 @@
     (cons (if (string? f)
             f
             (if-let [sub (values f)]
-              sub
+              (urlify sub)
               (throw (ex-info "Params do not conform to spec" {:params values :missing f}))))
           (format-path values fragments))))
 
@@ -35,37 +41,61 @@
     (constantly (str base-path "/" path))))
 
 (defn body-fn
-  [params]
-  (if-not params
+  [args]
+  (if-not args
     (constantly nil)
     (fn [body]
-      (let [conform (st/conform params body st/strip-extra-keys-transformer)]
-        (if (s/invalid? conform)
-          (throw (ex-info "Params do not conform to spec" {:spec params :params body}))
-          conform)))))
+      (if-let [err (s/check args body)]
+          (throw (ex-info "Params do not conform to schema" {:schema args :params body :err err}))
+          body))))
 
 (defn endpoint
-  [base-url {:keys [path method params] :as spec}]
-  (assemble-call
-    (path-fn base-url path)
-    (body-fn params)
-    method))
+  [base-url {:keys [path method args returns] :as spec}]
+  {:schema returns
+   :call (assemble-call
+           (path-fn base-url (sb/correct-path path))
+           (body-fn args)
+           method)})
 
 (defn wrap
   [endpoints]
   (fn [endpoint & args]
-    (if (seq args)
-      #((endpoints endpoint) (first args))
-      (endpoints endpoint))))
+    (let [{:keys [call schema]} (endpoints endpoint)]
+      {:schema schema
+       :call (if (seq args)
+               #(call (first args))
+               call)})))
 
 (defn client
-  [spellbook service-name]
+  [{services :services :as spellbook} service-name]
   (validate! spellbook)
-  (let [{:keys [path endpoints] :as service} (spellbook service-name)
-        base-url (str "http://localhost:3000/api/" path)]
+  (when-not (services service-name)
+    (throw (ex-info "Service does not exist in spellbook" {:service service-name
+                                                           :listed-services (keys services)})))
+  (let [{:keys [path endpoints] :as service} (services service-name)
+        base-url (str "http://localhost:8080/api/" path)]
     (wrap (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints)))))
 
+(def coercions
+ {s/Keyword keyword
+  s/Bool #(= "true" (string/lower-case %))
+  s/Int #(js/parseInt %)})
+
+(defn parse
+  [schema result]
+  ((or (coercions schema) identity) result))
+
+(defn coerce
+  [schema result]
+  (if (coll? result)
+    (let [coercer (c/coercer schema c/json-coercion-matcher)]
+      (cond-> result
+        (some? schema) coercer))
+    (parse schema result)))
+
 (defn call->
-  [call & thens]
-  (go (let [response (:body (<! (call)))]
-        (reduce (fn [acc f] (f acc)) response thens))))
+  [{call :call schema :schema} & thens]
+  (go (let [response (<! (call))]
+        (if (:success response)
+          (reduce (fn [acc f] (f acc)) (coerce schema (:body response)) thens)
+          (throw (ex-info "Uncaught exception in call" response))))))

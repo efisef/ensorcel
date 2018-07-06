@@ -1,5 +1,6 @@
 (ns example.server
   (:require [org.httpkit.server :refer [run-server]]
+            [ring.middleware.cors :refer [wrap-cors]]
             [ensorcel.conjure :as c]
             [example.api :as api]))
 
@@ -29,4 +30,9 @@
 
 (defn make-rocket-go-now
   []
-  (run-server example-app {:port 8080}))
+  (run-server
+    (wrap-cors example-app
+               :access-control-allow-origin  [#".*"]
+               :access-control-allow-credentials "true"
+               :access-control-allow-methods  [:get :post :delete])
+    {:port 8080}))
