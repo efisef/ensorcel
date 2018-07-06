@@ -3,8 +3,10 @@
                       :include-macros true])
      :clj  (:require [schema.core :as s])))
 
-(def path-regex #"^/?[a-zA-Z]+([-_]?[a-zA-Z0-9]+)*/?")
-(def path (s/both (s/pred #(re-matches path-regex %)) s/Str))
+(def path-regex #"^/?([a-zA-Z]+([-_]?[a-zA-Z0-9]+)*/?)?")
+(def path (s/either
+            [(s/either s/Keyword s/Str)]
+            (s/both (s/pred #(re-matches path-regex %)) s/Str)))
 
 (def version-regex #"^[a-zA-Z0-9]+")
 (def version (s/both (s/pred #(re-matches version-regex %)) s/Str))
@@ -29,5 +31,6 @@
 
 (defn correct-path
   [path]
-  (cond->> path
-    (vector? path) (interpose "/")))
+  (vec
+    (cond->> path
+      (vector? path) (interpose "/"))))

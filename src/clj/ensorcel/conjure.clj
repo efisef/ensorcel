@@ -38,7 +38,7 @@
 
 (defn coerce
   [value spec]
-  (or ((coercions spec) value) value))
+  ((or (coercions spec) identity) value))
 
 (defn parse-params
   [params input-spec]
@@ -59,6 +59,10 @@
                   identity)]
     (validate (coercer input) input-spec bad-request!)))
 
+(defn stringify
+  [x]
+  (cond-> x (not (coll? x)) str))
+
 (defn wrap-endpoint
   "Wraps a given endpoint implementation in the gubbins for a ring request
   Different outcomes for different arity implementions:
@@ -66,15 +70,16 @@
     1 arity -> provides a parameter map from the request body and url
     2 arity -> provides a parameter map and an options map containing things like cookies etc.
   Also validates that the inputs and outputs match the specification in the spellbook"
-  [{:keys [params returns response] :or {response ok}} f]
+  [{:keys [args returns response] :or {response ok}} f]
   (fn [req]
-    (let [args (arg-count f)
-          input (construct-input req params)
+    (let [num-args (arg-count f)
+          input (construct-input req args)
           opts (select-keys req [:cookies])]
-      (-> (cond (zero? args)  (f)
-                (= 1 args)    (f input)
-                :else         (f input opts))
+      (-> (cond (zero? num-args)  (f)
+                (= 1 num-args)    (f input)
+                :else             (f input opts))
         (validate returns internal-server-error!)
+        stringify
         response))))
 
 (defn endpoint
@@ -87,9 +92,9 @@
 
 (defn service
   "Creates a bidi service from the given impls and spellbook"
-  [spellbook service-name & impls]
+  [{services :services :as spellbook} service-name & impls]
   (validate! spellbook)
-  (let [{:keys [path endpoints]} (spellbook service-name)
+  (let [{:keys [path endpoints]} (services service-name)
         endpoint-impls (apply hash-map impls)
         endpoints (into {} (map (partial endpoint endpoint-impls) endpoints))]
     {(str path "/") endpoints}))
@@ -102,9 +107,9 @@
                                         :method :GET
                                         :returns s/Str}}}
               :version {:path "version"
-                        :endpoints {:ping {:path ""
-                                           :method :GET
-                                           :returns s/Str}}}}})
+                        :endpoints {:version {:path ""
+                                              :method :GET
+                                              :returns s/Str}}}}})
 
 (defn ping-service
   "ping ping ping ping"
@@ -130,9 +135,10 @@
   (sb/validate! spellbook)
   (let [full-services (conj services (ping-service) (version-service spellbook))]
     (-> (make-handler (root full-services))
-        (wrap-defaults (assoc api-defaults
-                              :params {:keywordize true}
-                              :cookies true))
+
+        wrap-http-response
         (wrap-json-body {:keywords? true :bigdecimals? true})
         wrap-json-response
-        wrap-http-response)))
+        (wrap-defaults (assoc api-defaults
+                              :params {:keywordize true}
+                              :cookies true)))))
