@@ -11,22 +11,22 @@
 
 (def spellbook
   {:version "1"
-   :services {:service1 {:path "service1"
-                         :endpoints {:endpoint1 {:path ""
-                                                 :method :GET
-                                                 :returns s/Str}
-                                     :endpoint2 {:path ["plus1" :operand]
-                                                 :method :POST
-                                                 :params {:operand s/Int}
-                                                 :returns s/Int}
-                                     :endpoint3 {:path ["combine" :thing]
-                                                 :method :POST
-                                                 :params {:thing s/Str
-                                                          :thang s/Str}
-                                                 :returns s/Str}
-                                     :endpoint4 {:path ["add" :thing :operand]
-                                                 :method :POST
-                                                 :params {:thing s/Str
-                                                          :operand s/Keyword
-                                                          :map {s/Keyword s/Int}}
-                                                 :returns {s/Keyword s/Int}}}}}})
+   :services {:example {:path "example"
+                        :endpoints {:example-get {:path ""
+                                                  :method :GET
+                                                  :returns s/Str}
+                                    :plus1 {:path ["plus1" :operand]
+                                            :method :POST
+                                            :args {:operand s/Int}
+                                            :returns s/Int}
+                                    :combine {:path ["combine" :thing]
+                                              :method :POST
+                                              :args {:thing s/Str
+                                                     :thang s/Str}
+                                              :returns s/Str}
+                                    :add {:path ["add" :thing :operand]
+                                          :method :POST
+                                          :args {:thing s/Keyword
+                                                 :operand s/Int
+                                                 :map {s/Keyword s/Int}}
+                                          :returns {s/Keyword s/Int}}}}}})

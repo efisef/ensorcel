@@ -94,6 +94,9 @@
   "Creates a bidi service from the given impls and spellbook"
   [{services :services :as spellbook} service-name & impls]
   (validate! spellbook)
+  (when-not (services service-name)
+    (throw (ex-info "Service does not exist in spellbook" {:service service-name
+                                                           :listed-services (keys services)})))
   (let [{:keys [path endpoints]} (services service-name)
         endpoint-impls (apply hash-map impls)
         endpoints (into {} (map (partial endpoint endpoint-impls) endpoints))]
