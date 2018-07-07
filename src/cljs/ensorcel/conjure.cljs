@@ -68,13 +68,14 @@
 
 (defn client
   "Create a REST client for a particular service from a spellbook"
-  [{services :services :as spellbook} service-name]
+  [{services :services :as spellbook} service-name & opts]
   (validate! spellbook)
   (when-not (services service-name)
     (throw (ex-info "Service does not exist in spellbook" {:service service-name
                                                            :listed-services (keys services)})))
-  (let [{:keys [path endpoints] :as service} (services service-name)
-        base-url (str "http://localhost:8080/api/" path)]
+  (let [{:keys [host port] :or {host "localhost" port 8080}} (apply hashmap opts)
+        {:keys [path endpoints] :as service} (services service-name)
+        base-url (str "http://" host ":" port "/api/" path)]
     (wrap (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints)))))
 
 (def coercions

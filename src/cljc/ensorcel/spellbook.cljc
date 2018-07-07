@@ -11,19 +11,16 @@
 (def version-regex #"^[a-zA-Z0-9]+")
 (def version (s/both (s/pred #(re-matches version-regex %)) s/Str))
 
-(defn schema?
-  [x]
-  (try (s/explain x)
-       true
-       (catch IllegalArgumentException e false)))
+(def Schema
+  (s/protocol s/Schema))
 
 (def SpellBook
   {(s/optional-key :version) version
    :services {s/Keyword {:path path
                          :endpoints {s/Keyword {:path path
                                                 :method (s/enum :GET :POST :PUT :DELETE)
-                                                (s/optional-key :args) (s/pred schema?)
-                                                (s/optional-key :returns) (s/pred schema?)}}}}})
+                                                (s/optional-key :args) Schema
+                                                (s/optional-key :returns) Schema}}}}})
 
 (defn validate!
   [spellbook]

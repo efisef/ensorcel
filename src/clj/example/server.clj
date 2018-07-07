@@ -35,4 +35,4 @@
                :access-control-allow-origin  [#".*"]
                :access-control-allow-credentials "true"
                :access-control-allow-methods  [:get :post :delete])
-    {:port 8080}))
+    {:port 8000}))

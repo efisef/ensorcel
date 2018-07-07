@@ -8,7 +8,8 @@
   [])
 
 (def example-client
-  (c/client api/spellbook :example))
+  (c/client api/spellbook :example
+            :host "localhost" :port 8000))
 
 (println "Hello")
 
