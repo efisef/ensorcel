@@ -19,7 +19,6 @@
   Raises <raise!> if not."
   [received expected raise!]
   (when (and expected (s/check expected received))
-    (prn received)
     (raise! (str (s/check expected received))))
   received)
 
