@@ -73,7 +73,7 @@
   (when-not (services service-name)
     (throw (ex-info "Service does not exist in spellbook" {:service service-name
                                                            :listed-services (keys services)})))
-  (let [{:keys [host port] :or {host "localhost" port 8080}} (apply hashmap opts)
+  (let [{:keys [host port] :or {host "localhost" port 8080}} (apply hash-map opts)
         {:keys [path endpoints] :as service} (services service-name)
         base-url (str "http://" host ":" port "/api/" path)]
     (wrap (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints)))))
