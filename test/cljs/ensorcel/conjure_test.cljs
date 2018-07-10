@@ -1,11 +1,8 @@
 (ns ensorcel.conjure-test
-  (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.test :refer-macros [deftest
                                       is
-                                      testing]
-                       :refer [async]]
-            [cljs.spec.alpha :as s]
-            [cljs.core.async :refer [<!]]
+                                      testing]]
+            [schema.core :as s]
             [ensorcel.conjure :as c]))
 
 (deftest test-format-path
@@ -30,16 +27,17 @@
   (testing "no params provided"
     (is (nil? ((c/body-fn nil))))
     (is (nil? ((c/body-fn nil) {:some :stuff}))))
-  (let [spec (s/keys :req-un [::foo ::bar])]
+  (let [schema {:foo s/Int :bar s/Int}]
     (testing "thrown on invalid body"
-      (is (thrown? ExceptionInfo ((c/body-fn spec) {:not :foo}))))
-    (testing "removes extra params in body"
-      (is (= {:foo 1 :bar 2} ((c/body-fn spec) {:foo 1 :bar 2 :other 3}))))))
+      (is (thrown? ExceptionInfo ((c/body-fn schema) {:not :foo}))))
+    (testing "throws with extra params in body"
+      (is (thrown? ExceptionInfo ((c/body-fn schema) {:foo 1 :bar 2 :other 3}))))))
 
 (def spellbook
-  {:service {:path "path"
-             :endpoints {:endpoint1 {:path "sub-path"
-                                     :method :GET}}}})
+  {:version "test"
+   :services {:service {:path "path"
+                        :endpoints {:endpoint {:path "sub-path"
+                                               :method :GET}}}}})
 (def bad-spellbook
   {:service {:path "path!!!@@@@"
              :endpoints {:endpoint1 {:path "sub-path"

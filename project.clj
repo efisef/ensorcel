@@ -16,15 +16,15 @@
 
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [metosin/spec-tools "0.7.1"]
-                 [org.clojure/clojurescript "1.10.238"]
+                 [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [cljs-http "0.1.45"]]
 
   :source-paths ["src/clj"
                  "src/cljc"
                  "src/cljs"]
 
-  :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
-            [lein-doo "0.1.10"]]
+  :plugins [[lein-cljsbuild "1.1.7"]
+            [lein-doo "0.1.8"]]
 
   :jvm-opts ["--add-modules" "java.xml.bind"]
 
@@ -41,11 +41,10 @@
                            :output-dir "resources/public/js/compiled/out"
                            :source-map-timestamp true}}
                {:id "test"
-                :source-paths ["src/cljs" "test/cljs"]
+                :source-paths ["src/cljc" "src/cljs" "test/cljs"]
                 :compiler {:output-to "resources/private/js/unit-test.js"
-                           ;:main ensorcel.test
-                           :optimizations :whitespace
-                           :pretty-print true}}
+                           :main ensorcel.runner
+                           :optimizations :none}}
                {:id "min"
                 :source-paths ["src"]
                 :compiler {:output-to "resources/public/js/compiled/ensorcel.js"
