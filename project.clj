@@ -1,4 +1,4 @@
-(defproject efisef/ensorcel "0.1.1-2"
+(defproject efisef/ensorcel "0.1.2"
   :description "Easier client / server interactions for Clojure[script]"
   :url "https://github.com/efisef/ensorcel"
   :license {:name "Eclipse Public License"
