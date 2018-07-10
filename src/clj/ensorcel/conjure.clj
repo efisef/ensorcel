@@ -82,13 +82,18 @@
         stringify
         response))))
 
+(defn correct-method
+  "Makes a method keyword bidi-compliant"
+  [method]
+  (keyword (string/lower-case (name method))))
+
 (defn endpoint
   "Creates a bidi endpoint from the given impls and an endpoint specification"
   [impls [endpoint spec]]
   (when-not (impls endpoint)
     (throw (ex-info "Spec only partially defined" {:missing endpoint})))
   (let [impl (impls endpoint)]
-    [(sb/correct-path (:path spec)) (wrap-endpoint spec impl)]))
+    [(correct-method (:method spec)) {(sb/correct-path (:path spec)) (wrap-endpoint spec impl)}]))
 
 (defn service
   "Creates a bidi service from the given impls and spellbook"
@@ -99,7 +104,7 @@
                                                            :listed-services (keys services)})))
   (let [{:keys [path endpoints]} (services service-name)
         endpoint-impls (apply hash-map impls)
-        endpoints (into {} (map (partial endpoint endpoint-impls) endpoints))]
+        endpoints (map (partial endpoint endpoint-impls) endpoints)]
     {(str path "/") endpoints}))
 
 ; ------------------------------- DEFAULT ENDPOINTS -------------------------
