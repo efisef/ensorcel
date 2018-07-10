@@ -43,8 +43,6 @@
              :endpoints {:endpoint1 {:path "sub-path"
                                      :method :GET}}}})
 
-; TODO Can't really do many of these tests until I figure out how to get async tests working :(
-
 (deftest test-client
   (testing "validates spec"
     (is (thrown? ExceptionInfo (c/client bad-spellbook :service))))
