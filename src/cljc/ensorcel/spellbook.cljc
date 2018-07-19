@@ -28,6 +28,6 @@
 
 (defn correct-path
   [path]
-  (vec
-    (cond->> path
-      (vector? path) (interpose "/"))))
+  (if (vector? path)
+    (vec (interpose "/" path))
+    path))

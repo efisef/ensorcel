@@ -86,8 +86,13 @@
                                                         :amount s/Int
                                                         :map {s/Keyword s/Int}}
                                                  :returns {s/Keyword s/Int}}
-
-                                     }}}})
+                                     :endpoint5 {:path "path"
+                                                 :method :GET
+                                                 :returns s/Str}
+                                     :endpoint6 {:path "path"
+                                                 :method :PUT
+                                                 :args {:x s/Num}
+                                                 :returns s/Num}}}}})
 
 
 (def endpoint1-result "hello-world")
@@ -116,6 +121,16 @@
   [{:keys [amount key map]}]
   (update map key (partial + amount)))
 
+(def endpoint5-result "hello")
+(defn endpoint5
+  []
+  endpoint5-result)
+
+(def endpoint6-result 42)
+(defn endpoint6
+  [{x :x}]
+  (inc x))
+
 (defn path
   [path]
   (str "http://localhost:8080/api/" path))
@@ -134,25 +149,42 @@
                     :endpoint1 endpoint1
                     :endpoint2 endpoint2
                     :endpoint3 endpoint3
-                    :endpoint4 endpoint4)))
+                    :endpoint4 endpoint4
+                    :endpoint5 endpoint5
+                    :endpoint6 endpoint6)))
 
 (deftest test-ete
   (let [kill! (run-server test-app {:port 8080})]
     (Thread/sleep 1000)
 
-    (testing "endpoints"
-      (is (= endpoint1-result (extract @(http/get (path "service1/")))))
-      (is (= (str endpoint2-result) (extract @(http/post (path "service1/plus1/41")))))
+    (testing "Simple get, no path"
+      (is (= endpoint1-result (extract @(http/get (path "service1/"))))))
+
+    (testing "url params"
+      (is (= (str endpoint2-result) (extract @(http/post (path "service1/plus1/41"))))))
+
+    (testing "url and body params"
       (is (= endpoint3-result (extract @(http/post (path "service1/combine/this")
                                                    {:headers {"content-type" "application/json"}
-                                                    :body (json/write-str {:thang "that"})}))))
+                                                    :body (json/write-str {:thang "that"})})))))
+
+    (testing "complicated multi params"
       (is (= (json/write-str endpoint4-result) (extract @(http/post (path "service1/add/bar/41")
                                                                     {:headers {"content-type" "application/json"}
-                                                                     :body (json/write-str {:map {:foo 1 :bar 1}})}))))
+                                                                     :body (json/write-str {:map {:foo 1 :bar 1}})})))))
+    (testing "correct header type"
       (is (re-find #"application/json" (-> @(http/post (path "service1/add/bar/41")
                                                        {:headers {"content-type" "application/json"}
                                                         :body (json/write-str {:map {:foo 1 :bar 1}})})
                                            :headers :content-type))))
+
+    (testing "simple get with path"
+      (is (= endpoint5-result (extract @(http/get (path "service1/path"))))))
+
+    (testing "simple put, same path as get"
+      (is (= (str endpoint6-result) (extract @(http/put (path "service1/path")
+                                                        {:headers {"content-type" "application/json"}
+                                                         :body (json/write-str {:x 41})})))))
 
     (testing "ping"
       (is (= "pong" (extract @(http/get (path "ping/"))))))
