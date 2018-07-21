@@ -15,7 +15,6 @@
                  [prismatic/schema "1.1.9"]
 
                  [org.clojure/test.check "0.10.0-alpha3"]
-                 [metosin/spec-tools "0.7.1"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [cljs-http "0.1.45"]]
 
