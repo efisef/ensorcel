@@ -3,9 +3,11 @@
 A simpler way to have fullstack Clojure[script] applications communicate, defining
 APIs as _data_.
 
+[[https://clojars.org/efisef/ensorcel][https://img.shields.io/clojars/v/efisef/ensorcel.svg]]
+
 ## Importing
 
-(:require [ensorcel.conjure :as conjure]) ; same for cljs and clj
+`(:require [ensorcel.conjure :as conjure]) ; same for cljs and clj`
 
 ## Usage
 
