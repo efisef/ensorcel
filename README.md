@@ -3,7 +3,7 @@
 A simpler way to have fullstack Clojure[script] applications communicate, defining
 APIs as _data_.
 
-[https://clojars.org/efisef/ensorcel](https://img.shields.io/clojars/v/efisef/ensorcel.svg)
+[![Clojars](https://img.shields.io/clojars/v/efisef/ensorcel.svg)](https://clojars.org/efisef/ensorcel)
 
 ## Importing
 
