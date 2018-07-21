@@ -5,7 +5,7 @@
             [schema.core :as s]
             [cljs-http.client :as http]
             [ensorcel.api.test :as api]
-            [ensorcel.conjure :as conjure :refer [call->]]))
+            [ensorcel.conjure :as conjure]))
 
 (deftest test-format-path
   (is (= ["foo" "bar" "baz"] (conjure/format-path {:1 "foo" :2 "bar" :3 "baz"} [:1 :2 :3])))
@@ -45,8 +45,12 @@
 (defn url-check
   [expected]
   (fn [path opts]
-    (println "this was called")
-    (is (= expected path))))
+    (is (= expected path))
+    {:success true}))
+
+(defn do-call
+  [{call :call schema :schema}]
+  (call))
 
 (deftest test-client
   (testing "validates spec"
@@ -55,6 +59,8 @@
   (testing "validates input")
   (testing "validates output")
   (testing "adds version method"
-    (with-redefs [http/get (url-check "borklocalhost:8080")]
-      (call-> (client :version) #(println "hi" %))))
-  (testing "adds ping method"))
+    (with-redefs [http/get (url-check "http://localhost:8080/api/version/")]
+      (do-call (client :version))))
+  (testing "adds ping method"
+    (with-redefs [http/get (url-check "http://localhost:8080/api/ping/")]
+      (do-call (client :ping)))))
