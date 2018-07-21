@@ -18,7 +18,7 @@ everything that you need to get started.
 
 First, define your API either as an `edn` file or in a `cljc` file.
 
-```
+```clojure
 (def spellbook
   {:version "1"
    :services {:service1 {:path "service1"
@@ -54,7 +54,7 @@ are not provided, no checks will happen.
 
 You can also specify inputs as part of the `<path>` by specifying it as a vector, eg.
 
-```
+```clojure
 :path [:my-var "endpoint"]
 ```
 
@@ -68,7 +68,7 @@ You can instantiate your server by providing binding for each endpoint, creating
 and then combining these into an app. For example, for the above spec we could do the following
 for `service2`:
 
-```
+```clojure
 (defn e2
   [params] ; params is a map of all keys specified in the :params key
   ["hello" "world"])
@@ -91,7 +91,7 @@ for `service2`:
 
 You can turn it into a full app definition by combining your services as follows:
 
-```
+```clojure
 (def my-app (s/app spellbook service1 service2))
 ```
 
@@ -107,7 +107,7 @@ by doing the following:
 
 This will give you a fully functioning client that will validate inputs and outputs for you. Eg.
 
-```
+```clojure
 (call-> (service1-client :endpoint1))
 
 (call-> (service2-client :endpoint2 {:val my-val})) ; params are provided after the endpoint name
