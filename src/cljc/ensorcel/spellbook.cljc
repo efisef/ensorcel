@@ -22,6 +22,16 @@
                                                 (s/optional-key :args) Schema
                                                 (s/optional-key :returns) Schema}}}}})
 
+(def default-spellbook
+  {:services {:ping {:path "ping"
+                     :endpoints {:ping {:path ""
+                                        :method :GET
+                                        :returns s/Str}}}
+              :version {:path "version"
+                        :endpoints {:version {:path ""
+                                              :method :GET
+                                              :returns s/Str}}}}})
+
 (defn validate!
   [spellbook]
   (s/validate SpellBook spellbook))

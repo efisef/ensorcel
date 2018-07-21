@@ -109,26 +109,17 @@
 
 ; ------------------------------- DEFAULT ENDPOINTS -------------------------
 
-(def default-spellbook
-  {:services {:ping {:path "ping"
-                     :endpoints {:ping {:path ""
-                                        :method :GET
-                                        :returns s/Str}}}
-              :version {:path "version"
-                        :endpoints {:version {:path ""
-                                              :method :GET
-                                              :returns s/Str}}}}})
 
 (defn ping-service
   "ping ping ping ping"
   []
-  (service default-spellbook :ping
+  (service sb/default-spellbook :ping
            :ping (fn [] "pong")))
 
 (defn version-service
   "version version version version"
   [{version :version}]
-  (service default-spellbook :version
+  (service sb/default-spellbook :version
            :version (fn [] version)))
 
 ; ------------------------------ APP ----------------------------------------

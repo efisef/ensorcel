@@ -56,7 +56,5 @@
   (testing "validates output")
   (testing "adds version method"
     (with-redefs [http/get (url-check "borklocalhost:8080")]
-      (println (client :version))
-      (println (client :endpoint1))
       (call-> (client :version) #(println "hi" %))))
   (testing "adds ping method"))

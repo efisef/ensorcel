@@ -57,6 +57,16 @@
            (body-fn args)
            method)})
 
+(defn version-endpoint
+  [{:keys [host port] :as opts}]
+  (let [path (str "http://" host ":" port "/api/version")]
+    (endpoint path (get-in sb/default-spellbook [:services :version :endpoints :version]))))
+
+(defn ping-endpoint
+  [{:keys [host port] :as opts}]
+  (let [path (str "http://" host ":" port "/api/ping")]
+    (endpoint path (get-in sb/default-spellbook [:services :ping :endpoints :ping]))))
+
 (defn wrap
   [endpoints]
   (fn [endpoint & args]
@@ -75,10 +85,13 @@
   (when-not (services service-name)
     (throw (ex-info "Service does not exist in spellbook" {:service service-name
                                                            :listed-services (keys services)})))
-  (let [{:keys [host port] :or {host "localhost" port 8080}} (apply hash-map opts)
+  (let [{:keys [host port] :or {host "localhost" port 8080} :as opts} (apply hash-map opts)
         {:keys [path endpoints] :as service} (services service-name)
-        base-url (str "http://" host ":" port "/api/" path)]
-    (wrap (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints)))))
+        base-url (str "http://" host ":" port "/api/" path)
+        endpoints (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints))]
+    (wrap (assoc endpoints
+                 :version (version-endpoint opts)
+                 :ping    (ping-endpoint opts)))))
 
 (def coercions
  {s/Keyword keyword
