@@ -60,7 +60,9 @@
 (defn wrap
   [endpoints]
   (fn [endpoint & args]
-    (let [{:keys [call schema]} (endpoints endpoint)]
+    (let [{:keys [call schema] :as e} (endpoints endpoint)]
+      (when-not e
+        (throw (ex-info "Endpoint does not exist in service" {:endpoint endpoint})))
       {:schema schema
        :call (if (seq args)
                #(call (first args))

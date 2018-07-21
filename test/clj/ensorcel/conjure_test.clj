@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [ensorcel.conjure :as c]
+            [ensorcel.api.test :as api]
             [org.httpkit.client :as http]
             [org.httpkit.server :refer [run-server]]
             [ring.util.http-predicates :refer [success?]]
@@ -60,41 +61,6 @@
 
 ; ----------------------------- ETE TEST ------------------------------------------
 
-; TODO
-; Test that arg map that comes in is correct (ie. url params are converted etc.)
-
-(def test-version "version")
-
-(def test-spellbook
-  {:version test-version
-   :services {:service1 {:path "service1"
-                         :endpoints {:endpoint1 {:path ""
-                                                 :method :GET
-                                                 :returns s/Str}
-                                     :endpoint2 {:path ["plus1" :operand]
-                                                 :method :POST
-                                                 :args {:operand s/Int}
-                                                 :returns s/Int}
-                                     :endpoint3 {:path ["combine" :thing]
-                                                 :method :POST
-                                                 :args {:thing s/Str
-                                                        :thang s/Str}
-                                                 :returns s/Str}
-                                     :endpoint4 {:path ["add" :key :amount]
-                                                 :method :POST
-                                                 :args {:key s/Keyword
-                                                        :amount s/Int
-                                                        :map {s/Keyword s/Int}}
-                                                 :returns {s/Keyword s/Int}}
-                                     :endpoint5 {:path "path"
-                                                 :method :GET
-                                                 :returns s/Str}
-                                     :endpoint6 {:path "path"
-                                                 :method :PUT
-                                                 :args {:x s/Num}
-                                                 :returns s/Num}}}}})
-
-
 (def endpoint1-result "hello-world")
 
 (defn endpoint1
@@ -144,8 +110,8 @@
         (re-find #"octet" (headers :content-type)) slurp))))
 
 (def test-app
-  (c/app test-spellbook
-         (c/service test-spellbook :service1
+  (c/app api/test-spellbook
+         (c/service api/test-spellbook :service1
                     :endpoint1 endpoint1
                     :endpoint2 endpoint2
                     :endpoint3 endpoint3
@@ -190,6 +156,6 @@
       (is (= "pong" (extract @(http/get (path "ping/"))))))
 
     (testing "version"
-      (is (= test-version (extract @(http/get (path "version/"))))))
+      (is (= api/test-version (extract @(http/get (path "version/"))))))
 
     (kill!)))
