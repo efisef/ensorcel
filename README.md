@@ -7,7 +7,9 @@ APIs as _data_.
 
 ## Importing
 
-`(:require [ensorcel.conjure :as conjure]) ; same for cljs and clj`
+```clojure
+(:require [ensorcel.conjure :as conjure]) ; same for cljs and clj
+```
 
 ## Usage
 
