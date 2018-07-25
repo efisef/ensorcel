@@ -109,15 +109,17 @@
       (cond-> body
         (re-find #"octet" (headers :content-type)) slurp))))
 
-(def test-app
-  (c/app api/test-spellbook
-         (c/service api/test-spellbook :service1
+(def test-service
+  (c/service api/test-spellbook :service1
                     :endpoint1 endpoint1
                     :endpoint2 endpoint2
                     :endpoint3 endpoint3
                     :endpoint4 endpoint4
                     :endpoint5 endpoint5
-                    :endpoint6 endpoint6)))
+                    :endpoint6 endpoint6))
+
+(def test-app
+  (c/app api/test-spellbook test-service))
 
 (deftest test-ete
   (let [kill! (run-server test-app {:port 8088})]
@@ -144,6 +146,11 @@
                                                         :body (json/write-str {:map {:foo 1 :bar 1}})})
                                            :headers :content-type))))
 
+    (testing "options method added for all endpoints"
+      (is (= "OPTIONS,POST" (-> @(http/options (path "service1/plus1/12"))
+                                           :headers :allow)))
+      (is (= "OPTIONS,GET,PUT" (-> @(http/options (path "service1/path"))
+                                           :headers :allow))))
     (testing "simple get with path"
       (is (= endpoint5-result (extract @(http/get (path "service1/path"))))))
 
