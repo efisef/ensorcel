@@ -99,7 +99,7 @@
 
 (defn path
   [path]
-  (str "http://localhost:8080/api/" path))
+  (str "http://localhost:8088/api/" path))
 
 (defn extract
   [{:keys [status headers body error] :as resp}]
@@ -120,7 +120,7 @@
                     :endpoint6 endpoint6)))
 
 (deftest test-ete
-  (let [kill! (run-server test-app {:port 8080})]
+  (let [kill! (run-server test-app {:port 8088})]
     (Thread/sleep 1000)
 
     (testing "Simple get, no path"
