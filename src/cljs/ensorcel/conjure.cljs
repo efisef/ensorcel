@@ -15,6 +15,8 @@
           opts (cond-> {} (map? body) (assoc :json-params body))]
       ((case method
         :GET http/get
+        :PUT http/put
+        :DELETE http/delete
         :POST http/post) (path-fn params) opts))))
 
 (defn urlify
@@ -75,7 +77,7 @@
         (throw (ex-info "Endpoint does not exist in service" {:endpoint endpoint})))
       {:schema schema
        :call (if (seq args)
-               #(call (first args))
+               #(call (apply hash-map args))
                call)})))
 
 (defn client
