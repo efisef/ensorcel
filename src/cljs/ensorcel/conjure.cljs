@@ -12,7 +12,7 @@
   (fn [& params]
     (let [params (if (seq params) (first params) {})
           body (body-fn params)
-          opts (cond-> {} (map? body) (assoc :json-params body))]
+          opts (cond-> {} (and (seq body) (map? body)) (assoc :json-params body))]
       ((case method
         :GET http/get
         :PUT http/put
@@ -43,20 +43,21 @@
     (constantly (str base-path "/" path))))
 
 (defn body-fn
-  [args]
-  (if-not args
-    (constantly nil)
-    (fn [body]
-      (if-let [err (s/check args body)]
-          (throw (ex-info "Params do not conform to schema" {:schema args :params body :err err}))
-          body))))
+  [path args]
+  (let [path-args (filter keyword? path)]
+    (if-not args
+      (constantly nil)
+      (fn [body]
+        (if-let [err (s/check args body)]
+            (throw (ex-info "Params do not conform to schema" {:schema args :params body :err err}))
+            (apply dissoc body path-args))))))
 
 (defn endpoint
   [base-url {:keys [path method args returns] :as spec}]
   {:schema returns
    :call (assemble-call
            (path-fn base-url (sb/correct-path path))
-           (body-fn args)
+           (body-fn path args)
            method)})
 
 (defn version-endpoint
@@ -112,11 +113,14 @@
         (some? schema) coercer))
     (parse schema result)))
 
+(defn extract
+  [schema response]
+  (if (:success response)
+    (reduce (fn [acc f] (f acc)) (coerce schema (:body response)) thens)
+    (throw (ex-info "Uncaught exception in call" response))))
+
 (defn call->
   "Calls the endpoint, and if the response is successful, passes the parsed
   response through to the supplied functions one after the other"
   [{call :call schema :schema} & thens]
-  (go (let [response (<! (call))]
-        (if (:success response)
-          (reduce (fn [acc f] (f acc)) (coerce schema (:body response)) thens)
-          (throw (ex-info "Uncaught exception in call" response))))))
+  (go (extract schema (<! (call)))))
