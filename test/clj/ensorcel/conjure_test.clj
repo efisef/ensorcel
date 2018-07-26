@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [ensorcel.conjure :as c]
+            [ensorcel.api.test :as api]
             [org.httpkit.client :as http]
             [org.httpkit.server :refer [run-server]]
             [ring.util.http-predicates :refer [success?]]
@@ -60,41 +61,6 @@
 
 ; ----------------------------- ETE TEST ------------------------------------------
 
-; TODO
-; Test that arg map that comes in is correct (ie. url params are converted etc.)
-
-(def test-version "version")
-
-(def test-spellbook
-  {:version test-version
-   :services {:service1 {:path "service1"
-                         :endpoints {:endpoint1 {:path ""
-                                                 :method :GET
-                                                 :returns s/Str}
-                                     :endpoint2 {:path ["plus1" :operand]
-                                                 :method :POST
-                                                 :args {:operand s/Int}
-                                                 :returns s/Int}
-                                     :endpoint3 {:path ["combine" :thing]
-                                                 :method :POST
-                                                 :args {:thing s/Str
-                                                        :thang s/Str}
-                                                 :returns s/Str}
-                                     :endpoint4 {:path ["add" :key :amount]
-                                                 :method :POST
-                                                 :args {:key s/Keyword
-                                                        :amount s/Int
-                                                        :map {s/Keyword s/Int}}
-                                                 :returns {s/Keyword s/Int}}
-                                     :endpoint5 {:path "path"
-                                                 :method :GET
-                                                 :returns s/Str}
-                                     :endpoint6 {:path "path"
-                                                 :method :PUT
-                                                 :args {:x s/Num}
-                                                 :returns s/Num}}}}})
-
-
 (def endpoint1-result "hello-world")
 
 (defn endpoint1
@@ -133,7 +99,7 @@
 
 (defn path
   [path]
-  (str "http://localhost:8080/api/" path))
+  (str "http://localhost:8088/api/" path))
 
 (defn extract
   [{:keys [status headers body error] :as resp}]
@@ -143,46 +109,53 @@
       (cond-> body
         (re-find #"octet" (headers :content-type)) slurp))))
 
-(def test-app
-  (c/app test-spellbook
-         (c/service test-spellbook :service1
+(def test-service
+  (c/service api/test-spellbook :test
                     :endpoint1 endpoint1
                     :endpoint2 endpoint2
                     :endpoint3 endpoint3
                     :endpoint4 endpoint4
                     :endpoint5 endpoint5
-                    :endpoint6 endpoint6)))
+                    :endpoint6 endpoint6))
+
+(def test-app
+  (c/app api/test-spellbook test-service))
 
 (deftest test-ete
-  (let [kill! (run-server test-app {:port 8080})]
+  (let [kill! (run-server test-app {:port 8088})]
     (Thread/sleep 1000)
 
     (testing "Simple get, no path"
-      (is (= endpoint1-result (extract @(http/get (path "service1/"))))))
+      (is (= endpoint1-result (extract @(http/get (path "test/"))))))
 
     (testing "url params"
-      (is (= (str endpoint2-result) (extract @(http/post (path "service1/plus1/41"))))))
+      (is (= (str endpoint2-result) (extract @(http/post (path "test/plus1/41"))))))
 
     (testing "url and body params"
-      (is (= endpoint3-result (extract @(http/post (path "service1/combine/this")
+      (is (= endpoint3-result (extract @(http/post (path "test/combine/this")
                                                    {:headers {"content-type" "application/json"}
                                                     :body (json/write-str {:thang "that"})})))))
 
     (testing "complicated multi params"
-      (is (= (json/write-str endpoint4-result) (extract @(http/post (path "service1/add/bar/41")
+      (is (= (json/write-str endpoint4-result) (extract @(http/post (path "test/add/bar/41")
                                                                     {:headers {"content-type" "application/json"}
                                                                      :body (json/write-str {:map {:foo 1 :bar 1}})})))))
     (testing "correct header type"
-      (is (re-find #"application/json" (-> @(http/post (path "service1/add/bar/41")
+      (is (re-find #"application/json" (-> @(http/post (path "test/add/bar/41")
                                                        {:headers {"content-type" "application/json"}
                                                         :body (json/write-str {:map {:foo 1 :bar 1}})})
                                            :headers :content-type))))
 
+    (testing "options method added for all endpoints"
+      (is (= "OPTIONS,POST" (-> @(http/options (path "test/plus1/12"))
+                                           :headers :allow)))
+      (is (= "OPTIONS,GET,PUT" (-> @(http/options (path "test/path"))
+                                           :headers :allow))))
     (testing "simple get with path"
-      (is (= endpoint5-result (extract @(http/get (path "service1/path"))))))
+      (is (= endpoint5-result (extract @(http/get (path "test/path"))))))
 
     (testing "simple put, same path as get"
-      (is (= (str endpoint6-result) (extract @(http/put (path "service1/path")
+      (is (= (str endpoint6-result) (extract @(http/put (path "test/path")
                                                         {:headers {"content-type" "application/json"}
                                                          :body (json/write-str {:x 41})})))))
 
@@ -190,6 +163,6 @@
       (is (= "pong" (extract @(http/get (path "ping/"))))))
 
     (testing "version"
-      (is (= test-version (extract @(http/get (path "version/"))))))
+      (is (= api/test-version (extract @(http/get (path "version/"))))))
 
     (kill!)))

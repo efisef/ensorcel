@@ -87,6 +87,18 @@
   [method]
   (keyword (string/lower-case (name method))))
 
+(defn construct-options
+  "Creates all required options for given paths and methods"
+  [endpoints]
+  (let [paths (group-by :path (map (fn [[k v]] (select-keys v [:path :method])) endpoints))]
+    (map (fn [[path endpoints]]
+           [:options
+            {(sb/correct-path path)
+             (constantly {:status 200
+                          :body {}
+                          :headers {"Allow" (conj (map (comp name :method) endpoints) "OPTIONS")}})}])
+         paths)))
+
 (defn endpoint
   "Creates a bidi endpoint from the given impls and an endpoint specification"
   [impls [endpoint spec]]
@@ -104,31 +116,22 @@
                                                            :listed-services (keys services)})))
   (let [{:keys [path endpoints]} (services service-name)
         endpoint-impls (apply hash-map impls)
+        options (construct-options endpoints)
         endpoints (map (partial endpoint endpoint-impls) endpoints)]
-    {(str path "/") endpoints}))
+    {(str path "/") (concat endpoints options)}))
 
 ; ------------------------------- DEFAULT ENDPOINTS -------------------------
-
-(def default-spellbook
-  {:services {:ping {:path "ping"
-                     :endpoints {:ping {:path ""
-                                        :method :GET
-                                        :returns s/Str}}}
-              :version {:path "version"
-                        :endpoints {:version {:path ""
-                                              :method :GET
-                                              :returns s/Str}}}}})
 
 (defn ping-service
   "ping ping ping ping"
   []
-  (service default-spellbook :ping
+  (service sb/default-spellbook :ping
            :ping (fn [] "pong")))
 
 (defn version-service
   "version version version version"
   [{version :version}]
-  (service default-spellbook :version
+  (service sb/default-spellbook :version
            :version (fn [] version)))
 
 ; ------------------------------ APP ----------------------------------------

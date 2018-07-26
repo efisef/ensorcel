@@ -12,9 +12,11 @@
   (fn [& params]
     (let [params (if (seq params) (first params) {})
           body (body-fn params)
-          opts (cond-> {} (map? body) (assoc :json-params body))]
+          opts (cond-> {} (and (seq body) (map? body)) (assoc :json-params body))]
       ((case method
         :GET http/get
+        :PUT http/put
+        :DELETE http/delete
         :POST http/post) (path-fn params) opts))))
 
 (defn urlify
@@ -41,29 +43,42 @@
     (constantly (str base-path "/" path))))
 
 (defn body-fn
-  [args]
-  (if-not args
-    (constantly nil)
-    (fn [body]
-      (if-let [err (s/check args body)]
-          (throw (ex-info "Params do not conform to schema" {:schema args :params body :err err}))
-          body))))
+  [path args]
+  (let [path-args (filter keyword? path)]
+    (if-not args
+      (constantly nil)
+      (fn [body]
+        (if-let [err (s/check args body)]
+            (throw (ex-info "Params do not conform to schema" {:schema args :params body :err err}))
+            (apply dissoc body path-args))))))
 
 (defn endpoint
   [base-url {:keys [path method args returns] :as spec}]
   {:schema returns
    :call (assemble-call
            (path-fn base-url (sb/correct-path path))
-           (body-fn args)
+           (body-fn path args)
            method)})
+
+(defn version-endpoint
+  [host port]
+  (let [path (str "http://" host ":" port "/api/version")]
+    (endpoint path (get-in sb/default-spellbook [:services :version :endpoints :version]))))
+
+(defn ping-endpoint
+  [host port]
+  (let [path (str "http://" host ":" port "/api/ping")]
+    (endpoint path (get-in sb/default-spellbook [:services :ping :endpoints :ping]))))
 
 (defn wrap
   [endpoints]
   (fn [endpoint & args]
-    (let [{:keys [call schema]} (endpoints endpoint)]
+    (let [{:keys [call schema] :as e} (endpoints endpoint)]
+      (when-not e
+        (throw (ex-info "Endpoint does not exist in service" {:endpoint endpoint})))
       {:schema schema
        :call (if (seq args)
-               #(call (first args))
+               #(call (apply hash-map args))
                call)})))
 
 (defn client
@@ -75,8 +90,11 @@
                                                            :listed-services (keys services)})))
   (let [{:keys [host port] :or {host "localhost" port 8080}} (apply hash-map opts)
         {:keys [path endpoints] :as service} (services service-name)
-        base-url (str "http://" host ":" port "/api/" path)]
-    (wrap (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints)))))
+        base-url (str "http://" host ":" port "/api/" path)
+        endpoints (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints))]
+    (wrap (assoc endpoints
+                 :version (version-endpoint host port)
+                 :ping    (ping-endpoint host port)))))
 
 (def coercions
  {s/Keyword keyword
@@ -95,11 +113,14 @@
         (some? schema) coercer))
     (parse schema result)))
 
+(defn extract
+  [schema response]
+  (if (:success response)
+    (reduce (fn [acc f] (f acc)) (coerce schema (:body response)) thens)
+    (throw (ex-info "Uncaught exception in call" response))))
+
 (defn call->
   "Calls the endpoint, and if the response is successful, passes the parsed
   response through to the supplied functions one after the other"
   [{call :call schema :schema} & thens]
-  (go (let [response (<! (call))]
-        (if (:success response)
-          (reduce (fn [acc f] (f acc)) (coerce schema (:body response)) thens)
-          (throw (ex-info "Uncaught exception in call" response))))))
+  (go (extract schema (<! (call)))))

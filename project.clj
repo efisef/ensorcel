@@ -1,4 +1,4 @@
-(defproject efisef/ensorcel "0.1.3"
+(defproject efisef/ensorcel "0.1.5"
   :description "Easier client / server interactions for Clojure[script]"
   :url "https://github.com/efisef/ensorcel"
   :license {:name "Eclipse Public License"
@@ -40,7 +40,7 @@
                            :output-dir "resources/public/js/compiled/out"
                            :source-map-timestamp true}}
                {:id "test"
-                :source-paths ["src/cljc" "src/cljs" "test/cljs"]
+                :source-paths ["src/cljc" "src/cljs" "test/cljs" "test/cljc"]
                 :compiler {:output-to "resources/private/js/unit-test.js"
                            :main ensorcel.runner
                            :optimizations :none}}
@@ -50,4 +50,4 @@
                            :main example.client
                            :optimizations :advanced
                            :pretty-print false}}]}
-  :profiles {:test {:source-paths ["src/clj" "test/clj"]}})
+  :profiles {:test {:source-paths ["src/clj" "test/clj" "test/cljc"]}})
