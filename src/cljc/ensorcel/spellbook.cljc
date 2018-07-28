@@ -1,7 +1,8 @@
 (ns ensorcel.spellbook
   #?(:cljs (:require [schema.core :as s
                       :include-macros true])
-     :clj  (:require [schema.core :as s])))
+     :clj  (:require [schema.core :as s]
+                     [ring.util.http-response :refer [created]])))
 
 (def path-regex #"^/?([a-zA-Z]+([-_]?[a-zA-Z0-9]+)*/?)?")
 (def path (s/either
@@ -20,6 +21,7 @@
                          :endpoints {s/Keyword {:path path
                                                 :method (s/enum :GET :POST :PUT :DELETE)
                                                 (s/optional-key :args) Schema
+                                                (s/optional-key :response) s/Any
                                                 (s/optional-key :returns) Schema}}}}})
 
 (def default-spellbook
@@ -41,3 +43,4 @@
   (if (vector? path)
     (vec (interpose "/" path))
     path))
+

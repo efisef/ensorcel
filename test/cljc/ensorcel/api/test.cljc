@@ -1,9 +1,15 @@
 (ns ensorcel.api.test
   #?(:cljs (:require [schema.core :as s
-                      :include-macros true])
-     :clj  (:require [schema.core :as s])))
+                      :include-macros true]
+                     [ensorcel.resource :as r])
+     :clj  (:require [schema.core :as s]
+                     [ensorcel.resource :as r])))
 
 (def test-version "version")
+
+(def Resource
+  {:id s/Int
+   :msg s/Str})
 
 (def test-spellbook
   {:version test-version
@@ -32,4 +38,8 @@
                                  :endpoint6 {:path "path"
                                              :method :PUT
                                              :args {:x s/Num}
-                                             :returns s/Num}}}}})
+                                             :returns s/Num}}}
+              :resource (r/resource {:path "resource"
+                                     :resource Resource
+                                     :id s/Int
+                                     :supports [:GET :POST :PUT :DELETE]})}})
