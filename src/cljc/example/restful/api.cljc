@@ -16,7 +16,7 @@
 
 (def spellbook
   {:version "1"
-   :services {:postbox (sb/resource {:path "postbox"
+   :services {:postbox (r/resource {:path "postbox"
                                      :resource Resource
                                      :id ID
                                      :supports [:GET :POST :PUT :DELETE]})}})

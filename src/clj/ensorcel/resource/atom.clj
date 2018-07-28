@@ -8,7 +8,7 @@
 (defn resource
   [spellbook service & opts]
   (let [{:keys [start-id next-id]} (merge defaults (apply hash-map opts))
-        service-path (get-in spellbook [service :path])
+        service-path (get-in spellbook [:services service :path])
         data (atom {:store {} :next-id start-id})]
     [spellbook
      service
