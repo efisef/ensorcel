@@ -1,16 +1,11 @@
-(ns example.restful.server
-  (:require [org.httpkit.server :refer [run-server]]
-            [ring.middleware.cors :refer [wrap-cors]]
-            [ring.util.http-response :refer [not-found!]]
-            [ensorcel.conjure :as c]
-            [ensorcel.conjure.resource.atom :refer [resource]]
-            [example.restful.api :as api]))
+(ns ensorcel.resource.atom
+  (:require [ring.util.http-response :refer [not-found!]]))
 
 (def defaults
   {:start-id nil
    :next-id (fn [_] (str (java.util.UUID/randomUUID)))})
 
-(defn restful-atom
+(defn resource
   [spellbook service & opts]
   (let [{:keys [start-id next-id]} (merge defaults (apply hash-map opts))
         service-path (get-in spellbook [service :path])
@@ -37,22 +32,3 @@
                  (do (swap! data update :store dissoc id)
                      item)
                  (not-found! {:id id})))]))
-
-(def service
-  (apply c/service (resource api/spellbook :postbox
-                             :start-id 0
-                             :next-id inc)))
-
-(def example-app
-  (c/app api/spellbook
-         service))
-
-(defn make-rocket-go-now
-  []
-  (run-server
-    (wrap-cors example-app
-               :access-control-allow-origin  [#".*"]
-               :access-control-allow-credentials "true"
-               :access-control-allow-methods  [:get :post :delete])
-    {:port 8000}))
-

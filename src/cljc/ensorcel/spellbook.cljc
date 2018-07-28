@@ -1,7 +1,8 @@
 (ns ensorcel.spellbook
   #?(:cljs (:require [schema.core :as s
                       :include-macros true])
-     :clj  (:require [schema.core :as s])))
+     :clj  (:require [schema.core :as s]
+                     [ring.util.http-response :refer [created]])))
 
 (def path-regex #"^/?([a-zA-Z]+([-_]?[a-zA-Z0-9]+)*/?)?")
 (def path (s/either
@@ -42,3 +43,4 @@
   (if (vector? path)
     (vec (interpose "/" path))
     path))
+
