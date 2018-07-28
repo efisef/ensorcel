@@ -20,6 +20,7 @@
                          :endpoints {s/Keyword {:path path
                                                 :method (s/enum :GET :POST :PUT :DELETE)
                                                 (s/optional-key :args) Schema
+                                                (s/optional-key :response) s/Any
                                                 (s/optional-key :returns) Schema}}}}})
 
 (def default-spellbook
