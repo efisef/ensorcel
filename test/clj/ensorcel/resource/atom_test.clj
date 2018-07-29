@@ -71,13 +71,12 @@
                (json/read-str (:body @(http/get (path "resource/")))))))
 
       (testing "GET pagination"
-        (let [resp @(http/get (path "resources/?limit=1"))
-              _ (println resp)
+        (let [resp @(http/get (path "resource/?limit=1"))
               body (json/read-str (:body resp))]
           (is (= 1 (count (body "values"))))
           (is (= "1" (body "next")))
-          (is (= resp @(http/get (path "resources/?limit=1&page=0")))))
-        (let [resp @(http/get (path "resources/?limit=1&page=1"))
+          (is (= body (json/read-str (:body @(http/get (path "resource/?limit=1&page=0")))))))
+        (let [resp @(http/get (path "resource/?limit=1&page=1"))
               body (json/read-str (:body resp))]
           (is (= 1 (count (body "values"))))
           (is (= nil (body "next")))))

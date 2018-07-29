@@ -26,7 +26,7 @@
                   (cond
                     (nil? page) {:values (first pages) :next (next-page 0 (count pages))}
                     (> page (count pages)) (bad-request! (format "Page %s does not exist!" page))
-                    :else {:values (nth page values) :next (next-page page (count pages))})))
+                    :else {:values (nth pages page) :next (next-page page (count pages))})))
      :new (fn [contents]
             (let [{store :store id :next-id} @data
                   item (assoc contents :id id)]
