@@ -7,7 +7,6 @@
             [org.httpkit.client :as http]
             [org.httpkit.server :refer [run-server]]
             [ring.util.http-predicates :refer [success?]]
-            [bidi.bidi :as b]
             [schema.core :as s]))
 
 (defn path
