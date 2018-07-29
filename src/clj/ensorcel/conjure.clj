@@ -45,7 +45,7 @@
   (if (seq input-spec)
     (into {}
           (for [[k v] params]
-            [k (coerce v (input-spec k))]))
+            [k (coerce v (or (input-spec k) (input-spec (s/optional-key k))))]))
     params))
 
 (defn construct-input
@@ -78,9 +78,9 @@
       (-> (cond (zero? num-args)  (f)
                 (= 1 num-args)    (f input)
                 :else             (f input opts))
-        (validate returns internal-server-error!)
-        stringify
-        response))))
+          (validate returns internal-server-error!)
+          stringify
+          response))))
 
 (defn correct-method
   "Makes a method keyword bidi-compliant"
@@ -163,5 +163,6 @@
         (wrap-json-body {:keywords? true :bigdecimals? true})
         wrap-json-response
         (wrap-defaults (assoc api-defaults
-                              :params {:keywordize true}
+                              :params {:keywordize true
+                                       :urlencoded true}
                               :cookies true)))))

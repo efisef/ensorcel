@@ -1,9 +1,13 @@
 (ns ensorcel.resource.atom
-  (:require [ring.util.http-response :refer [not-found!]]))
+  (:require [ring.util.http-response :refer [not-found! bad-request!]]))
 
 (def defaults
   {:start-id nil
    :next-id (fn [_] (str (java.util.UUID/randomUUID)))})
+
+(defn next-page
+  [page num-pages]
+  (when-not (= (inc page) num-pages) (str (inc page))))
 
 (defn resource
   [spellbook service & opts]
@@ -15,7 +19,14 @@
      :get (fn [{id :id}] (if-let [result (get-in @data [:store id])]
                            result
                            (not-found! {:id id})))
-     :get-all (fn [] (or (vals (@data :store)) []))
+     :get-all (fn [{:keys [page limit] :or {limit 5}}]
+                (let [values (or (vals (@data :store)) [])
+                      page (when page (Integer/parseInt page))
+                      pages (partition-all limit values)]
+                  (cond
+                    (nil? page) {:values (first pages) :next (next-page 0 (count pages))}
+                    (> page (count pages)) (bad-request! (format "Page %s does not exist!" page))
+                    :else {:values (nth pages page) :next (next-page page (count pages))})))
      :new (fn [contents]
             (let [{store :store id :next-id} @data
                   item (assoc contents :id id)]

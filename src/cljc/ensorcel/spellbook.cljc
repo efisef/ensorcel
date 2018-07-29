@@ -21,8 +21,18 @@
                          :endpoints {s/Keyword {:path path
                                                 :method (s/enum :GET :POST :PUT :DELETE)
                                                 (s/optional-key :args) Schema
+                                                (s/optional-key :query) [s/Keyword]
                                                 (s/optional-key :response) s/Any
                                                 (s/optional-key :returns) Schema}}}}})
+
+(defn Paginated
+  [value]
+  {:values [value]
+   :next (s/maybe s/Str)})
+
+(def Paging-Opts
+  {:limit s/Int
+   :page s/Str})
 
 (def default-spellbook
   {:services {:ping {:path "ping"
