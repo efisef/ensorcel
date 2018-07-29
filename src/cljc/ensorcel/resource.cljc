@@ -1,8 +1,10 @@
 (ns ensorcel.resource
   #?(:cljs (:require [schema.core :as s
-                      :include-macros true])
+                      :include-macros true]
+                     [ensorcel.spellbook :as sb])
      :clj  (:require [schema.core :as s]
-                     [ring.util.http-response :refer [created]])))
+                     [ring.util.http-response :refer [created]]
+                     [ensorcel.spellbook :as sb])))
 
 (def Location s/Str)
 
@@ -15,7 +17,9 @@
          :returns resource}
    :get-all {:path ""
              :method :GET
-             :returns [resource]}})
+             :query (keys sb/Paging-Opts)
+             :args (into {} (map (fn [[k v]] [(s/optional-key k) v]) sb/Paging-Opts))
+             :returns (sb/Paginated resource)}})
 
 (defmethod endpoint :POST [{:keys [resource]}]
   {:new {:path ""

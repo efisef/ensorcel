@@ -150,5 +150,6 @@
         (wrap-json-body {:keywords? true :bigdecimals? true})
         wrap-json-response
         (wrap-defaults (assoc api-defaults
-                              :params {:keywordize true}
+                              :params {:keywordize true
+                                       :urlencoded true}
                               :cookies true)))))

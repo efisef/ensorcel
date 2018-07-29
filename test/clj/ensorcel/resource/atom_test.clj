@@ -7,6 +7,7 @@
             [org.httpkit.client :as http]
             [org.httpkit.server :refer [run-server]]
             [ring.util.http-predicates :refer [success?]]
+            [bidi.bidi :as b]
             [schema.core :as s]))
 
 (defn path
@@ -33,61 +34,75 @@
   (let [kill! (run-server test-app {:port 8088})]
     (Thread/sleep 1000)
 
-    (testing "GET no exists"
-      (is (= 404 (:status @(http/get (path "resource/0"))))))
+    (try
+      (testing "GET no exists"
+        (is (= 404 (:status @(http/get (path "resource/0"))))))
 
-    (testing "PUT no exists"
-      (is (= 404 (:status @(http/put (path "resource/0")
-                                     {:headers {"content-type" "application/json"}
-                                      :body (json/write-str {:msg "hello!"})})))))
+      (testing "PUT no exists"
+        (is (= 404 (:status @(http/put (path "resource/0")
+                                       {:headers {"content-type" "application/json"}
+                                        :body (json/write-str {:msg "hello!"})})))))
 
-    (testing "DELETE no exists"
-      (is (= 404 (:status @(http/delete (path "resource/0"))))))
+      (testing "DELETE no exists"
+        (is (= 404 (:status @(http/delete (path "resource/0"))))))
 
-    (testing "POST new item"
-      (let [resp @(http/post (path "resource/")
-                             {:headers {"content-type" "application/json"}
-                              :body (json/write-str {:msg "hello!"})})]
-        (is (= 201 (:status resp)))
-        (is (= "http://localhost:8088/api/resource/0" (-> resp :headers :location)))))
+      (testing "POST new item"
+        (let [resp @(http/post (path "resource/")
+                               {:headers {"content-type" "application/json"}
+                                :body (json/write-str {:msg "hello!"})})]
+          (is (= 201 (:status resp)))
+          (is (= "http://localhost:8088/api/resource/0" (-> resp :headers :location)))))
 
-    (testing "POST new item incs id"
-      (let [resp @(http/post (path "resource/")
-                             {:headers {"content-type" "application/json"}
-                              :body (json/write-str {:msg "hello?"})})]
-        (is (= 201 (:status resp)))
-        (is (= "http://localhost:8088/api/resource/1" (-> resp :headers :location)))))
+      (testing "POST new item incs id"
+        (let [resp @(http/post (path "resource/")
+                               {:headers {"content-type" "application/json"}
+                                :body (json/write-str {:msg "hello?"})})]
+          (is (= 201 (:status resp)))
+          (is (= "http://localhost:8088/api/resource/1" (-> resp :headers :location)))))
 
-    (testing "GET item"
-      (is (= (json/write-str {:msg "hello!" :id 0}) (:body @(http/get (path "resource/0")))))
-      (is (= (json/write-str {:msg "hello?" :id 1}) (:body @(http/get (path "resource/1"))))))
-      (is (= 200 (:status @(http/get (path "resource/1")))))
+      (testing "GET item"
+        (is (= (json/write-str {:msg "hello!" :id 0}) (:body @(http/get (path "resource/0")))))
+        (is (= (json/write-str {:msg "hello?" :id 1}) (:body @(http/get (path "resource/1")))))
+        (is (= 200 (:status @(http/get (path "resource/1"))))))
 
-    (testing "GET all items"
-      (is (= (json/read-str (json/write-str [{:msg "hello!" :id 0} {:msg "hello?" :id 1}]))
-             (json/read-str (:body @(http/get (path "resource/")))))))
+      (testing "GET all items"
+        (is (= (json/read-str (json/write-str {:values [{:msg "hello!" :id 0} {:msg "hello?" :id 1}]
+                                               :next nil}))
+               (json/read-str (:body @(http/get (path "resource/")))))))
 
-    (testing "PUT edit item"
-      (let [resp @(http/put (path "resource/0")
-                            {:headers {"content-type" "application/json"}
-                             :body (json/write-str {:msg "bye!"})})]
-        (is (= 200 (:status resp)))
-        (is (= (json/read-str (json/write-str {:msg "bye!" :id 0}))
-               (json/read-str (:body resp))))))
+      (testing "GET pagination"
+        (let [resp @(http/get (path "resources/?limit=1"))
+              _ (println resp)
+              body (json/read-str (:body resp))]
+          (is (= 1 (count (body "values"))))
+          (is (= "1" (body "next")))
+          (is (= resp @(http/get (path "resources/?limit=1&page=0")))))
+        (let [resp @(http/get (path "resources/?limit=1&page=1"))
+              body (json/read-str (:body resp))]
+          (is (= 1 (count (body "values"))))
+          (is (= nil (body "next")))))
 
-    (testing "DELETE item"
-      (let [resp @(http/delete (path "resource/0"))]
-        (is (= 200 (:status resp)))
-        (is (= (json/read-str (json/write-str {:msg "bye!" :id 0}))
-               (json/read-str (:body resp)))))
-      (is (= (json/read-str (json/write-str [{:msg "hello?" :id 1}]))
-             (json/read-str (:body @(http/get (path "resource/")))))))
+      (testing "PUT edit item"
+        (let [resp @(http/put (path "resource/0")
+                              {:headers {"content-type" "application/json"}
+                               :body (json/write-str {:msg "bye!"})})]
+          (is (= 200 (:status resp)))
+          (is (= (json/read-str (json/write-str {:msg "bye!" :id 0}))
+                 (json/read-str (:body resp))))))
 
-    (testing "ping"
-      (is (= "pong" (extract @(http/get (path "ping/"))))))
+      (testing "DELETE item"
+        (let [resp @(http/delete (path "resource/0"))]
+          (is (= 200 (:status resp)))
+          (is (= (json/read-str (json/write-str {:msg "bye!" :id 0}))
+                 (json/read-str (:body resp)))))
+        (is (= (json/read-str (json/write-str {:next nil :values [{:msg "hello?" :id 1}]}))
+               (json/read-str (:body @(http/get (path "resource/")))))))
 
-    (testing "version"
-      (is (= api/test-version (extract @(http/get (path "version/"))))))
+      (testing "ping"
+        (is (= "pong" (extract @(http/get (path "ping/"))))))
 
-    (kill!)))
+      (testing "version"
+        (is (= api/test-version (extract @(http/get (path "version/"))))))
+
+      (finally (kill!)))))
 
