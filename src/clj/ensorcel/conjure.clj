@@ -92,20 +92,32 @@
   [endpoints]
   (let [paths (group-by :path (map (fn [[k v]] (select-keys v [:path :method])) endpoints))]
     (map (fn [[path endpoints]]
-           [:options
-            {(sb/correct-path path)
-             (constantly {:status 200
-                          :body {}
-                          :headers {"Allow" (conj (map (comp name :method) endpoints) "OPTIONS")}})}])
+           {:path (sb/correct-path path)
+            :endpoint (constantly {:status 200
+                                   :body {}
+                                   :headers {"Allow" (conj (map (comp name :method) endpoints) "OPTIONS")}})
+            :method :OPTIONS})
          paths)))
 
 (defn endpoint
   "Creates a bidi endpoint from the given impls and an endpoint specification"
-  [impls [endpoint spec]]
+  [impls [endpoint {:keys [path method] :as spec}]]
   (when-not (impls endpoint)
     (throw (ex-info "Spec only partially defined" {:missing endpoint})))
   (let [impl (impls endpoint)]
-    [(correct-method (:method spec)) {(sb/correct-path (:path spec)) (wrap-endpoint spec impl)}]))
+    {:method method
+     :path (sb/correct-path path)
+     :endpoint (wrap-endpoint spec impl)}))
+
+(defn correct-method
+  [method]
+  (keyword (string/upper-case (name method))))
+
+(defn method-dispatch
+  [[path endpoints]]
+  (let [method->endpoint (into {} (map #(vector (:method %) (:endpoint %)) endpoints))]
+    [path (fn [{:keys [request-method] :as req}]
+            ((method->endpoint (correct-method request-method)) req))]))
 
 (defn service
   "Creates a bidi service from the given impls and spellbook"
@@ -117,8 +129,9 @@
   (let [{:keys [path endpoints]} (services service-name)
         endpoint-impls (apply hash-map impls)
         options (construct-options endpoints)
-        endpoints (map (partial endpoint endpoint-impls) endpoints)]
-    {(str path "/") (concat endpoints options)}))
+        endpoints (map (partial endpoint endpoint-impls) endpoints)
+        endpoints (map method-dispatch (group-by :path (concat options endpoints)))]
+    {(str path "/") endpoints}))
 
 ; ------------------------------- DEFAULT ENDPOINTS -------------------------
 
