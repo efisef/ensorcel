@@ -19,7 +19,7 @@
      :get (fn [{id :id}] (if-let [result (get-in @data [:store id])]
                            result
                            (not-found! {:id id})))
-     :get-all (fn [{:keys [page limit] :or {limit 5}}]
+     :get-all (fn [{:keys [page limit] :or {limit 100}}]
                 (let [values (or (vals (@data :store)) [])
                       page (when page (Integer/parseInt page))
                       pages (partition-all limit values)]
