@@ -1,27 +1,22 @@
 (ns example.client
-  (:require [example.api :as api]
-            [ensorcel.conjure :refer [call->] :as c]))
+  (:require [example.restful.api :as api]
+            [ensorcel.conjure :refer [call-paginated-> call->] :as c]
+            [devtools.core :as devtools]))
 
+(devtools/install!)
 (enable-console-print!)
 
 (defn on-js-reload
   [])
 
 (def example-client
-  (c/client api/spellbook :example
+  (c/client api/spellbook :postbox
             :host "localhost" :port 8000))
 
 (println "Hello")
 
-(call-> (example-client :example-get)
+(call-> (example-client :new :msg "hello!"))
+(call-> (example-client :get :id 0)
         println)
-
-(call-> (example-client :plus1 {:operand 1})
-        (partial + 1)
-        println)
-
-(call-> (example-client :combine {:thing "this" :thang "that"})
-        println)
-
-(call-> (example-client :add {:thing :foo :operand 100 :map {:foo 1 :bar 2}})
-        println)
+(call-paginated-> (example-client :get-all)
+                  println)

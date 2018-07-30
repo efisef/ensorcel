@@ -24,8 +24,9 @@
                       page (when page (Integer/parseInt page))
                       pages (partition-all limit values)]
                   (cond
+                    (empty? pages) {:values [] :next nil}
                     (nil? page) {:values (first pages) :next (next-page 0 (count pages))}
-                    (> page (count pages)) (bad-request! (format "Page %s does not exist!" page))
+                    (>= page (count pages)) (bad-request! (format "Page %s does not exist!" page))
                     :else {:values (nth pages page) :next (next-page page (count pages))})))
      :new (fn [contents]
             (let [{store :store id :next-id} @data

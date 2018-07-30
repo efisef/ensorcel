@@ -14,6 +14,7 @@
                  [ring-cors "0.1.12"]
                  [prismatic/schema "1.1.9"]
 
+                 [binaryage/devtools "0.9.4"]
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [cljs-http "0.1.45"]]
@@ -27,10 +28,7 @@
 
   :jvm-opts ["--add-modules" "java.xml.bind"]
 
-  :cljsbuild {:test-commands {"my-test" ["phantomjs"
-                                         "phantom/unit-test.js"
-                                         "resources/private/html/unit-test.html"]}
-              :builds
+  :cljsbuild {:builds
               [{:id "dev"
                 :source-paths ["src/cljs"
                                "src/cljc"]

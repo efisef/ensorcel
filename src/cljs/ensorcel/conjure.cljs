@@ -36,28 +36,33 @@
               (throw (ex-info "Params do not conform to spec" {:params values :missing f}))))
           (format-path values fragments))))
 
+(defn query-fn
+  [query-args args]
+  (string/join "&" (map #(str (name %) "=" (args %)) (filter args query-args))))
+
 (defn path-fn
-  [base-path path]
-  (if (vector? path)
-    #(str base-path "/" (apply str (format-path % path)))
-    (constantly (str base-path "/" path))))
+  [base-path path query-args]
+  (let [query #(when (seq (filter % query-args)) (str "?" (query-fn query-args %)))]
+    (if (vector? path)
+      #(str base-path "/" (apply str (format-path % path)) (query %))
+      #(str base-path "/" path (query %)))))
 
 (defn body-fn
-  [path args]
+  [path query-args args]
   (let [path-args (filter keyword? path)]
     (if-not args
       (constantly nil)
       (fn [body]
         (if-let [err (s/check args body)]
             (throw (ex-info "Params do not conform to schema" {:schema args :params body :err err}))
-            (apply dissoc body path-args))))))
+            (apply dissoc body (concat path-args query-args)))))))
 
 (defn endpoint
-  [base-url {:keys [path method args returns] :as spec}]
+  [base-url {:keys [path method args query returns] :as spec}]
   {:schema returns
    :call (assemble-call
-           (path-fn base-url (sb/correct-path path))
-           (body-fn path args)
+           (path-fn base-url (sb/correct-path path) query args)
+           (body-fn path query args)
            method)})
 
 (defn version-endpoint
@@ -73,13 +78,15 @@
 (defn wrap
   [endpoints]
   (fn [endpoint & args]
-    (let [{:keys [call schema] :as e} (endpoints endpoint)]
+    (let [{:keys [call schema] :as e} (endpoints endpoint)
+          args (when (seq args) (apply hash-map args))]
       (when-not e
         (throw (ex-info "Endpoint does not exist in service" {:endpoint endpoint})))
       {:schema schema
-       :call (if (seq args)
-               #(call (apply hash-map args))
-               call)})))
+       :args args
+       :call-fn call
+       :endpoint endpoint
+       :call (if args #(call args) call)})))
 
 (defn client
   "Create a REST client for a particular service from a spellbook"
@@ -114,7 +121,7 @@
     (parse schema result)))
 
 (defn extract
-  [schema response]
+  [schema thens response]
   (if (:success response)
     (reduce (fn [acc f] (f acc)) (coerce schema (:body response)) thens)
     (throw (ex-info "Uncaught exception in call" response))))
@@ -123,4 +130,21 @@
   "Calls the endpoint, and if the response is successful, passes the parsed
   response through to the supplied functions one after the other"
   [{call :call schema :schema} & thens]
-  (go (extract schema (<! (call)))))
+  (go (extract schema thens (<! (call)))))
+
+(defn extract-pages
+  [{:keys [endpoint call-fn args schema call] :as dispatch}]
+  (go (let [response (<! (if args (call-fn args) (call-fn)))]
+        (if (:success response)
+          (let [{:keys [values next]} (coerce schema (:body response))]
+            (if next
+              (concat values (<! (extract-pages (update dispatch :args assoc :page next))))
+              values))
+          (throw (ex-info "Uncaught exception in call" response))))))
+
+(defn call-paginated->
+  "Same as call, except provides the resulting paginated response as a
+  lazy sequence that consumes the rest of the sequence on demand."
+  [dispatch & thens]
+  (go (let [lazy-vals (<! (extract-pages dispatch))]
+        (reduce (fn [acc f] (f acc)) lazy-vals thens))))
