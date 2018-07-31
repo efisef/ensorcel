@@ -28,6 +28,8 @@ jobs:
             - ~/.m2
           key: v1-dependencies-{{ checksum "project.clj" }}
 
+      - run: echo "127.0.0.1 redis" >> /etc/hosts
+
       # run tests!
       - run: lein test
       - run: LC_ALL=C lein doo phantom test once
