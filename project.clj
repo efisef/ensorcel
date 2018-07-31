@@ -13,6 +13,7 @@
                  [ring/ring-json "0.4.0"]
                  [ring-cors "0.1.12"]
                  [prismatic/schema "1.1.9"]
+                 [com.taoensso/carmine "2.18.1"]
 
                  [binaryage/devtools "0.9.4"]
                  [org.clojure/test.check "0.10.0-alpha3"]

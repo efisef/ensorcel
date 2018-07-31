@@ -7,6 +7,7 @@ jobs:
   build:
     docker:
       - image: efisef/circle-base
+      - image: redis
 
     working_directory: ~/ensorcel
 
@@ -26,6 +27,8 @@ jobs:
           paths:
             - ~/.m2
           key: v1-dependencies-{{ checksum "project.clj" }}
+
+      - run: echo "127.0.0.1 redis" >> /etc/hosts
 
       # run tests!
       - run: lein test

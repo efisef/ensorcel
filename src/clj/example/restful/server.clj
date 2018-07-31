@@ -2,13 +2,12 @@
   (:require [org.httpkit.server :refer [run-server]]
             [ring.middleware.cors :refer [wrap-cors]]
             [ensorcel.conjure :as c]
-            [ensorcel.resource.atom :refer [resource]]
+            [ensorcel.resource.atom :as atomr]
+            [ensorcel.resource.redis :as redisr]
             [example.restful.api :as api]))
 
 (def service
-  (apply c/service (resource api/spellbook :postbox
-                             :start-id 0
-                             :next-id inc)))
+  (apply c/service (redisr/resource api/spellbook :postbox)))
 
 (def example-app
   (c/app api/spellbook

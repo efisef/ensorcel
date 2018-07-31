@@ -6,7 +6,7 @@
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.http-response :refer [wrap-http-response]]
             [ring.middleware.json :refer [wrap-json-params wrap-json-body wrap-json-response]]
-            [ring.util.http-response :refer [ok bad-request! internal-server-error!]]
+            [ring.util.http-response :refer [ok bad-request! internal-server-error! method-not-allowed!]]
             [ring.util.response :as response]
             [schema.core :as s]
             [schema.coerce :as c]
@@ -117,7 +117,10 @@
   [[path endpoints]]
   (let [method->endpoint (into {} (map #(vector (:method %) (:endpoint %)) endpoints))]
     [path (fn [{:keys [request-method] :as req}]
-            ((method->endpoint (correct-method request-method)) req))]))
+            (let [endpoint (method->endpoint (correct-method request-method))]
+              (when-not endpoint
+                (method-not-allowed!))
+              (endpoint req)))]))
 
 (defn service
   "Creates a bidi service from the given impls and spellbook"
