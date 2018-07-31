@@ -8,7 +8,7 @@
 ; A REST-oriented API (vs. something a bit more freeform as is the default)
 ; Fulfills most CRUD-like operations on a service
 
-(def ID s/Int)
+(def ID s/Str)
 
 (def Resource
   {:id ID
