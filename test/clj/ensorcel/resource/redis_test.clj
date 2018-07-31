@@ -1,12 +1,20 @@
-(ns ensorcel.resource.atom-test
+(ns ensorcel.resource.redis-test
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [ensorcel.conjure :as c]
-            [ensorcel.resource.atom :refer [resource]]
+            [ensorcel.resource.redis :refer [resource wcar*]]
             [ensorcel.api.test :as api]
+            [ring.util.http-predicates :refer [success?]]
+            [taoensso.carmine :as car]
             [org.httpkit.client :as http]
-            [org.httpkit.server :refer [run-server]]
-            [ring.util.http-predicates :refer [success?]]))
+            [org.httpkit.server :refer [run-server]]))
+
+(defn clear-keys-fixture
+  [f]
+  (f)
+  (wcar* (car/flushall)))
+
+(use-fixtures :each clear-keys-fixture)
 
 (defn path
   [path]
@@ -64,9 +72,9 @@
         (is (= 200 (:status @(http/get (path "resource/1"))))))
 
       (testing "GET all items"
-        (is (= (json/read-str (json/write-str {:values [{:msg "hello!" :id 0} {:msg "hello?" :id 1}]
-                                               :next nil}))
-               (json/read-str (:body @(http/get (path "resource/")))))))
+        (is (= (set ((json/read-str (json/write-str {:values [{:msg "hello!" :id 0} {:msg "hello?" :id 1}]
+                                               :next nil})) "values"))
+               (set ((json/read-str (:body @(http/get (path "resource/")))) "values")))))
 
       (testing "GET pagination"
         (let [resp @(http/get (path "resource/?limit=1"))
@@ -102,4 +110,5 @@
         (is (= api/test-version (extract @(http/get (path "version/"))))))
 
       (finally (kill!)))))
+
 

@@ -30,11 +30,11 @@
                :get-all   (fn [] (get-all prefix))
                :put       (fn [{:keys [id] :as item}] (wcar* (car/set (str prefix id) item)))
                :delete    (fn [id] (wcar* (car/del (str prefix id))))
-               :next-id   (fn [] (let [next-id (wcar* (car/get "next-id"))]
-                                   (wcar* (car/set "next-id" (next-id-fn next-id)))
+               :next-id   (fn [] (let [{next-id :value} (wcar* (car/get "next-id"))]
+                                   (wcar* (car/set "next-id" {:value (next-id-fn next-id)}))
                                    next-id))}]
     (wcar*
-      (car/set "next-id" start-id))
+      (car/set "next-id" {:value start-id}))
     (res/resource (assoc opts
                          :spellbook spellbook
                          :service service
