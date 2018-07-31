@@ -24,7 +24,7 @@
 (def test-service
   (apply c/service (resource api/test-spellbook :resource
                        :start-id 0
-                       :next-id inc)))
+                       :next-id-fn inc)))
 
 (def test-app
   (c/app api/test-spellbook test-service))
