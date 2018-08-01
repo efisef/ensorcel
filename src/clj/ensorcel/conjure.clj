@@ -73,11 +73,10 @@
   [{:keys [args returns response] :or {response ok}} f]
   (fn [req]
     (let [num-args (arg-count f)
-          input (construct-input req args)
-          opts (select-keys req [:cookies])]
+          input (construct-input req args)]
       (-> (cond (zero? num-args)  (f)
                 (= 1 num-args)    (f input)
-                :else             (f input opts))
+                :else             (f input req))
           (validate returns internal-server-error!)
           stringify
           response))))

@@ -36,11 +36,12 @@
           url-params {:one :two}
           body-params {:three :four}
           provided-opts {:cookies :mm-cookies}
+          req (merge provided-opts {:params url-params :body body-params})
           wrapped (c/wrap-endpoint {} (fn [params opts]
                                       (assert (= (merge url-params body-params) params))
-                                      (assert (= opts provided-opts))
+                                      (assert (= opts req))
                                       (reset! called? :changed)))]
-      (wrapped (merge provided-opts {:params url-params :body body-params}))
+      (wrapped req)
       (is (= :changed @called?))))
 
   (testing "throws on bad input"
