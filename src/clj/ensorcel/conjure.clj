@@ -19,7 +19,7 @@
   Raises <raise!> if not."
   [received expected raise!]
   (when (and expected (s/check expected received))
-    (raise! {:received received
+    (raise! {:received (or (:error received) received)
              :check (s/check expected received)}))
   received)
 
