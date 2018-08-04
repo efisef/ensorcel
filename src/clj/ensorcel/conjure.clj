@@ -19,7 +19,8 @@
   Raises <raise!> if not."
   [received expected raise!]
   (when (and expected (s/check expected received))
-    (raise! (str received ":" (s/check expected received))))
+    (raise! {:received received
+             :check (s/check expected received)}))
   received)
 
 (defn arg-count [f]
