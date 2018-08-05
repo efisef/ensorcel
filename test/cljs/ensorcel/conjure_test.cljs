@@ -74,11 +74,14 @@
     (if-let [body (:body expects)]
       (is (= body (:json-params opts)))
       (is (nil? (:json-params opts))))
+    (if-let [headers (:headers expects)]
+      (is (= headers (:headers opts)))
+      (is (nil? (:headers opts))))
     {:success true :body value}))
 
 (defn do-call
-  [{call :call schema :schema}]
-  (conjure/extract schema [] (call)))
+  [{call-fn :call-fn args :args schema :schema headers :headers}]
+  (conjure/extract schema [] (call-fn args headers)))
 
 (deftest test-client
   (testing "validates spec"
@@ -111,7 +114,14 @@
     (with-redefs [http/put (expects-then-returns {:path "http://localhost:8080/api/test/path"
                                                   :body {:x 1}}
                                                  "path")]
-      (is (= "path" (do-call (client :endpoint6 :x 1)))))))
+      (is (= "path" (do-call (client :endpoint6 :x 1))))))
+  (testing "adding token"
+    (let [token "abc123"]
+     (with-redefs [http/put (expects-then-returns {:path "http://localhost:8080/api/test/path"
+                                                   :body {:x 1}
+                                                   :headers {"Authorization" (str "Token " token)}}
+                                                   "path")]
+      (is (= "path" (do-call ((conjure/inject-token token client) :endpoint6 :x 1))))))))
 
 (deftest test-pagination-single
   (let [client (conjure/client api/test-spellbook :resource)

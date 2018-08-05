@@ -9,10 +9,12 @@
 
 (defn assemble-call
   [path-fn body-fn method]
-  (fn [& params]
-    (let [params (if (seq params) (first params) {})
+  (fn [params headers]
+    (let [params (or params {})
           body (body-fn params)
-          opts (cond-> {} (and (seq body) (map? body)) (assoc :json-params body))]
+          opts (cond-> {}
+                 (and (seq body) (map? body)) (assoc :json-params body)
+                 (some? headers) (assoc :headers headers))]
       ((case method
         :GET http/get
         :PUT http/put
@@ -85,8 +87,7 @@
       {:schema schema
        :args args
        :call-fn call
-       :endpoint endpoint
-       :call (if args #(call args) call)})))
+       :endpoint endpoint})))
 
 (defn client
   "Create a REST client for a particular service from a spellbook"
@@ -102,6 +103,12 @@
     (wrap (assoc endpoints
                  :version (version-endpoint host port)
                  :ping    (ping-endpoint host port)))))
+
+(defn inject-token
+  [token client]
+  (fn [endpoint & args]
+    (let [construct (apply client endpoint args)]
+      (update construct :headers assoc "Authorization" (str "Token " token)))))
 
 (def coercions
  {s/Keyword keyword
@@ -129,12 +136,12 @@
 (defn call->
   "Calls the endpoint, and if the response is successful, passes the parsed
   response through to the supplied functions one after the other"
-  [{call :call schema :schema} & thens]
-  (go (extract schema thens (<! (call)))))
+  [{call-fn :call-fn args :args headers :headers schema :schema} & thens]
+  (go (extract schema thens (<! (call-fn args headers)))))
 
 (defn extract-pages
-  [{:keys [endpoint call-fn args schema call] :as dispatch}]
-  (go (let [response (<! (if args (call-fn args) (call-fn)))]
+  [{:keys [endpoint call-fn args schema headers] :as dispatch}]
+  (go (let [response (<! (call-fn args headers))]
         (if (:success response)
           (let [{:keys [values next]} (coerce schema (:body response))]
             (if next
