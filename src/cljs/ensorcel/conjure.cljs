@@ -68,13 +68,13 @@
            method)})
 
 (defn version-endpoint
-  [host port]
-  (let [path (str "http://" host ":" port "/api/version")]
+  [host port version-str]
+  (let [path (str "http://" host ":" port "/api/" version-str "version")]
     (endpoint path (get-in sb/default-spellbook [:services :version :endpoints :version]))))
 
 (defn ping-endpoint
-  [host port]
-  (let [path (str "http://" host ":" port "/api/ping")]
+  [host port version-str]
+  (let [path (str "http://" host ":" port "/api/" version-str "ping")]
     (endpoint path (get-in sb/default-spellbook [:services :ping :endpoints :ping]))))
 
 (defn wrap
@@ -96,13 +96,15 @@
   (when-not (services service-name)
     (throw (ex-info "Service does not exist in spellbook" {:service service-name
                                                            :listed-services (keys services)})))
-  (let [{:keys [host port] :or {host "localhost" port 8080}} (apply hash-map opts)
+  (let [opts (apply hash-map opts)
+        {:keys [host port] :or {host "localhost" port 8080}} opts
         {:keys [path endpoints] :as service} (services service-name)
-        base-url (str "http://" host ":" port "/api/" path)
+        version-str (when (:include-version? opts) (str (:version spellbook) "/"))
+        base-url (str "http://" host ":" port "/api/" version-str path)
         endpoints (into {} (map (fn [[k v]] [k (endpoint base-url v)]) endpoints))]
     (wrap (assoc endpoints
-                 :version (version-endpoint host port)
-                 :ping    (ping-endpoint host port)))))
+                 :version (version-endpoint host port version-str)
+                 :ping    (ping-endpoint host port version-str)))))
 
 (defn inject-token
   [token client]

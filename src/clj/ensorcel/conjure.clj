@@ -153,15 +153,21 @@
 ; ------------------------------ APP ----------------------------------------
 
 (defn root
-  [services]
-  ["/" {"api/" (apply merge services)}])
+  [{version :version} {:keys [include-version?]} services]
+  (let [api (cond-> "api/" include-version? (str version))]
+    ["/" {api (apply merge services)}]))
+
+(def default-opts
+  {:include-version? false})
 
 (defn app
   "Creates a full ring application with default wrappers given a spellbook and conjured services"
-  [spellbook & services]
+  [spellbook opts & services]
   (sb/validate! spellbook)
-  (let [full-services (conj services (ping-service) (version-service spellbook))]
-    (-> (make-handler (root full-services))
+  (let [opts (merge default-opts opts)
+        full-services (conj services (ping-service) (version-service spellbook))
+        routes (root spellbook opts full-services)]
+    (-> (make-handler routes)
         wrap-http-response
         (wrap-json-body {:keywords? true :bigdecimals? true})
         wrap-json-response

@@ -26,7 +26,7 @@
                        :next-id-fn inc)))
 
 (def test-app
-  (c/app api/test-spellbook test-service))
+  (c/app api/test-spellbook {} test-service))
 
 (deftest test-ete
   (let [kill! (run-server test-app {:port 8088})]

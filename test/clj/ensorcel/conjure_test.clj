@@ -105,7 +105,7 @@
 (defn extract
   [{:keys [status headers body error] :as resp}]
   (if (or error (not (success? resp)))
-    (throw (ex-info "Something went wrong" resp))
+    (throw (ex-info (str "Something went wrong: " body) resp))
     (do
       (cond-> body
         (re-find #"octet" (headers :content-type)) slurp))))
@@ -120,7 +120,19 @@
                     :endpoint6 endpoint6))
 
 (def test-app
-  (c/app api/test-spellbook test-service))
+  (c/app api/test-spellbook {} test-service))
+
+(def test-app-with-version
+  (c/app api/test-spellbook {:include-version? true} test-service))
+
+(deftest test-with-version
+  (let [kill! (run-server test-app-with-version {:port 8088})]
+    (Thread/sleep 1000)
+
+    (try
+      (testing "Adds version string into URL"
+        (= "pong" @(http/get (path (str api/test-version "/ping/")))))
+      (finally (kill!)))))
 
 (deftest test-ete
   (let [kill! (run-server test-app {:port 8088})]
