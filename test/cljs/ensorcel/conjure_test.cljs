@@ -54,6 +54,8 @@
       (is (= {:foo 1} ((conjure/body-fn [] ["hello" :bar] schema) {:foo 1 :bar 2}))))))
 
 (def client (conjure/client api/test-spellbook :test))
+(def client-with-version (conjure/client api/test-spellbook :test
+                                         :include-version? true))
 
 (def bad-spellbook
   {:service {:path "path!!!@@@@"
@@ -82,6 +84,14 @@
 (defn do-call
   [{call-fn :call-fn args :args schema :schema headers :headers}]
   (conjure/extract schema [] (call-fn args headers)))
+
+(deftest test-version-client
+  (testing "adds version to the ping url"
+    (with-redefs [http/get (url-check (str "http://localhost:8080/api/" api/test-version "/ping/"))]
+      (do-call (client-with-version :ping))))
+  (testing "adds version to the url"
+    (with-redefs [http/get (url-check (str "http://localhost:8080/api/" api/test-version "/test/"))]
+      (do-call (client-with-version :endpoint1)))))
 
 (deftest test-client
   (testing "validates spec"
