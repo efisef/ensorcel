@@ -155,7 +155,7 @@
 
 (defn root
   [{version :version} {:keys [include-version?]} services]
-  (let [api (cond-> "api/" include-version? (str version))]
+  (let [api (cond-> "api/" include-version? (str version "/"))]
     ["/" {api (apply merge services)}]))
 
 (def default-opts
