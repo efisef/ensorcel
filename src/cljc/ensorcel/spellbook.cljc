@@ -22,6 +22,7 @@
                                                 :method (s/enum :GET :POST :PUT :DELETE)
                                                 (s/optional-key :args) Schema
                                                 (s/optional-key :query) [s/Keyword]
+                                                (s/optional-key :headers) {s/Str s/Str}
                                                 (s/optional-key :response) s/Any
                                                 (s/optional-key :returns) Schema}}}}})
 

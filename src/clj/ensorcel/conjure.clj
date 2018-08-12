@@ -71,7 +71,7 @@
     1 arity -> provides a parameter map from the request body and url
     2 arity -> provides a parameter map and an options map containing things like cookies etc.
   Also validates that the inputs and outputs match the specification in the spellbook"
-  [{:keys [args returns response] :or {response ok}} f]
+  [{:keys [args returns response headers] :or {response ok}} f]
   (fn [req]
     (let [num-args (arg-count f)
           input (construct-input req args)]
@@ -80,7 +80,8 @@
                 :else             (f input req))
           (validate returns internal-server-error!)
           stringify
-          response))))
+          response
+          (update :headers merge headers)))))
 
 (defn correct-method
   "Makes a method keyword bidi-compliant"
