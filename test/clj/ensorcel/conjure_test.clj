@@ -1,12 +1,13 @@
 (ns ensorcel.conjure-test
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
+            [clojure.spec.alpha :as s]
             [ensorcel.conjure :as c]
+            [ensorcel.types :as t]
             [ensorcel.api.test :as api]
             [org.httpkit.client :as http]
             [org.httpkit.server :refer [run-server]]
-            [ring.util.http-predicates :refer [success?]]
-            [schema.core :as s]))
+            [ring.util.http-predicates :refer [success?]]))
 
 ; ----------------------------- UNIT TESTS ----------------------------------------
 
@@ -45,18 +46,20 @@
       (is (= :changed @called?))))
 
   (testing "throws on bad input"
-    (let [wrapped (c/wrap-endpoint {:args {:foo s/Str}}
+    (let [_ (s/def ::foo ::t/string)
+          wrapped (c/wrap-endpoint {:args (s/keys :req-un [::foo])}
                                  (fn [params] (throw (ex-info "I shouldn't get here" {}))))]
       (is (thrown-with-msg? RuntimeException #"HTTP 400" (wrapped {:body {:bar "hello"}})))))
 
   (testing "throws on bad output"
-    (let [wrapped (c/wrap-endpoint {:returns s/Str}
+    (let [wrapped (c/wrap-endpoint {:returns ::t/string}
                                  (fn [params] 42))]
       (is (thrown-with-msg? RuntimeException #"HTTP 500" (wrapped {})))))
 
   (testing "properly coerces params to provided schema"
-    (let [wrapped (c/wrap-endpoint
-                    {:args {:it s/Int}}
+    (let [_ (s/def ::it ::t/integer)
+          wrapped (c/wrap-endpoint
+                    {:args (s/keys :req-un [::it])}
                     (fn [params] (assert (= 42 (:it params)))))]
       (wrapped {:params {:it "42"}}))))
 

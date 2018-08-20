@@ -1,53 +1,89 @@
 (ns ensorcel.spellbook
-  #?(:cljs (:require [schema.core :as s
+  #?(:cljs (:require [cljs.spec.alpha :as s
                       :include-macros true])
-     :clj  (:require [schema.core :as s]
-                     [ring.util.http-response :refer [created]])))
+     :clj  (:require [clojure.spec.alpha :as s])))
+
+; -- PATHS --------------------------------------------------------------------
 
 (def path-regex #"^/?([a-zA-Z]+([-_]?[a-zA-Z0-9]+)*/?)?")
-(def path (s/either
-            [(s/either s/Keyword s/Str)]
-            (s/both (s/pred #(re-matches path-regex %)) s/Str)))
+
+(s/def :path/composite
+  (s/+ #(or (keyword? %) (string? %))))
+
+(s/def ::path
+  (s/or :composite :path/composite
+        :simple    (s/and string? #(re-matches path-regex %))))
+
+(s/def ::string
+  string?)
+
+; -- VERSION ------------------------------------------------------------------
 
 (def version-regex #"^[a-zA-Z0-9]+")
-(def version (s/both (s/pred #(re-matches version-regex %)) s/Str))
+(s/def ::version
+  (s/and string? #(re-matches version-regex %)))
 
-(def Schema
-  (s/protocol s/Schema))
+; -- SPELLBOOK ----------------------------------------------------------------
 
-(def SpellBook
-  {(s/optional-key :version) version
-   :services {s/Keyword {:path path
-                         :endpoints {s/Keyword {:path path
-                                                :method (s/enum :GET :POST :PUT :DELETE)
-                                                (s/optional-key :args) Schema
-                                                (s/optional-key :query) [s/Keyword]
-                                                (s/optional-key :headers) {s/Str s/Str}
-                                                (s/optional-key :response) s/Any
-                                                (s/optional-key :returns) Schema}}}}})
+(s/def ::spec
+  some?)
 
-(defn Paginated
-  [value]
-  {:values [value]
-   :next (s/maybe s/Str)})
+(s/def ::method
+  #{:GET :POST :PUT :DELETE})
 
-(def Paging-Opts
-  {:limit s/Int
-   :page s/Str})
+(s/def ::args
+  ::spec)
+
+(s/def ::query
+  (s/+ keyword?))
+
+(s/def ::headers
+  (s/map-of string? string?))
+
+(s/def ::response
+  some?)
+
+(s/def ::returns
+  ::spec)
+
+(s/def ::endpoint
+  (s/keys :req-un [::path
+                   ::method]
+          :opt-un [::args
+                   ::query
+                   ::headers
+                   ::response
+                   ::returns]))
+
+(s/def ::endpoints
+  (s/map-of keyword? ::endpoint))
+
+(s/def ::service
+  (s/keys :req-un [::path
+                   ::endpoints]))
+
+(s/def ::services
+  (s/map-of keyword? ::service))
+
+(s/def ::spellbook
+  (s/keys :req-un [::version
+                   ::services]))
 
 (def default-spellbook
-  {:services {:ping {:path "ping"
+  {:version "default"
+   :services {:ping {:path "ping"
                      :endpoints {:ping {:path ""
                                         :method :GET
-                                        :returns s/Str}}}
+                                        :returns string?}}}
               :version {:path "version"
                         :endpoints {:version {:path ""
                                               :method :GET
-                                              :returns s/Str}}}}})
+                                              :returns string?}}}}})
 
 (defn validate!
   [spellbook]
-  (s/validate SpellBook spellbook))
+  (when (s/invalid? (s/conform ::spellbook spellbook))
+    (throw (ex-info "Spellbook failed validation" (s/explain-data ::spellbook spellbook)))))
 
 (defn correct-path
   [path]
