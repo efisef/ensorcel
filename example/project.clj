@@ -5,7 +5,7 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/data.json "0.2.6"]
                  [metosin/ring-http-response "0.9.0"]
-                 [efisef/ensorcel "0.2.4-2"]
+                 [efisef/ensorcel "0.2.4-3"]
 
                  [binaryage/devtools "0.9.4"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]

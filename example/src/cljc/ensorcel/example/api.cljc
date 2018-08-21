@@ -3,6 +3,7 @@
                       :include-macros true]
                      [ensorcel.types :as types])
      :clj  (:require [clojure.spec.alpha :as s]
+                     [ring.util.http-response :refer [created]]
                      [ensorcel.types :as types])))
 
 (def api-version "1")
@@ -30,16 +31,17 @@
 
 (def spellbook
   {:version api-version
-   :services {:widgets {:get    {:path [:id]
-                                 :method :GET
-                                 :args (s/keys :req-un [:widget/id])
-                                 :returns ::widget}
-                        :new    {:path ""
-                                 :method :POST
-                                 :args ::new-widget-request
-                                 :response created
-                                 :returns ::location}
-                        :delete {:path [:id]
-                                 :method :DELETE
-                                 :args (s/keys :req-un [:widget/id])
-                                 :returns ::widget}}}})
+   :services {:widgets {:path "widgets"
+                        :endpoints {:get    {:path [:id]
+                                             :method :GET
+                                             :args (s/keys :req-un [:widget/id])
+                                             :returns ::widget}
+                                    :new    {:path ""
+                                             :method :POST
+                                             :args ::new-widget-request
+                                             :response created
+                                             :returns ::location}
+                                    :delete {:path [:id]
+                                             :method :DELETE
+                                             :args (s/keys :req-un [:widget/id])
+                                             :returns ::widget}}}}})
