@@ -1,8 +1,10 @@
 (ns ensorcel.types
   #?(:cljs (:require [cljs.spec.alpha :as s
                       :include-macros true]
+                     [spec-tools.core :as st]
                      [clojure.string :as string])
      :clj  (:require [clojure.spec.alpha :as s]
+                     [spec-tools.core :as st]
                      [clojure.string :as string])))
 
 (s/def ::integer integer?)
@@ -52,3 +54,9 @@
   [spec json]
   (let [problems (::s/problems (s/explain-data spec json))]
     (reduce fix-problem json problems)))
+
+(defmacro only-keys
+  "Keys wrapper for spec that wraps each keys call in
+  spec-tools/spec so that we can exclude any extra keys."
+  [& args]
+  `(st/spec (s/keys ~@args)))

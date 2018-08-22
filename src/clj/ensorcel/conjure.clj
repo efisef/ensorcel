@@ -3,6 +3,7 @@
             [clojure.data.json :as json]
             [clojure.string :as string]
             [clojure.spec.alpha :as s]
+            [spec-tools.core :as st]
             [org.httpkit.server :as server]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.http-response :refer [wrap-http-response]]
@@ -12,7 +13,7 @@
             [ensorcel.types :as types]
             [ensorcel.spellbook :refer [validate!] :as sb]))
 
-; ------------------------------ BIDI ROUTE CONSTRUCTION ----------------------
+;; -- BIDI ROUTE CONSTRUCTION -------------------------------------------------
 
 (defn validate
   "Validates that a received payload matches the expected schema.
@@ -21,7 +22,9 @@
   (when (and expected (s/invalid? (s/conform expected received)))
     (raise! {:received (pr-str received)
              :check (s/explain-str expected received)}))
-  received)
+  (if expected
+    (st/decode expected received st/strip-extra-keys-transformer)
+    received))
 
 (defn arg-count [f]
   "Calculates the argument count to <f> by using reflection."
@@ -113,7 +116,7 @@
         endpoints (map method-dispatch (group-by :path (concat options endpoints)))]
     {(str path "/") endpoints}))
 
-; ------------------------------- DEFAULT ENDPOINTS -------------------------
+;; -- DEFAULT ENDPOINTS -------------------------------------------------------
 
 (defn ping-service
   "ping ping ping ping"
@@ -127,7 +130,7 @@
   (service sb/default-spellbook :version
            :version (fn [] version)))
 
-; ------------------------------ APP ----------------------------------------
+;; -- APP ---------------------------------------------------------------------
 
 (defn root
   [{version :version} {:keys [include-version?]} services]
@@ -146,7 +149,7 @@
         routes (root spellbook opts full-services)]
     (-> (make-handler routes)
         wrap-http-response
-        (wrap-json-body {:keywords? true :bigdecimals? true})
+        (wrap-json-body {:keywords? true})
         wrap-json-response
         (wrap-defaults (assoc api-defaults
                               :params {:keywordize true

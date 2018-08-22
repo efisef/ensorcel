@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/data.json "0.2.6"]
                  [metosin/ring-http-response "0.9.0"]
+                 [metosin/spec-tools "0.7.1"]
                  [bidi "2.1.3"]
                  [http-kit "2.2.0"]
                  [ring "1.6.3"]
