@@ -4,10 +4,11 @@
                                       async
                                       is
                                       testing]]
-            [schema.core :as s]
+            [cljs.spec.alpha :as s :include-macros true]
             [cljs.core.async :refer [<!]]
             [cljs-http.client :as http]
             [ensorcel.api.test :as api]
+            [ensorcel.types :as t]
             [ensorcel.conjure :as conjure]))
 
 (deftest test-format-path
@@ -43,15 +44,15 @@
   (testing "no params provided"
     (is (nil? ((conjure/body-fn [] [] nil))))
     (is (nil? ((conjure/body-fn [] [] nil) {:some :stuff}))))
-  (let [schema {:foo s/Int :bar s/Int}]
+  (let [_ (s/def ::foo ::t/integer)
+        _ (s/def ::bar ::t/integer)
+        _ (s/def ::schema (s/keys :req-un [::foo ::bar]))]
     (testing "thrown on invalid body"
-      (is (thrown? ExceptionInfo ((conjure/body-fn [] [] schema) {:not :foo}))))
-    (testing "throws with extra params in body"
-      (is (thrown? ExceptionInfo ((conjure/body-fn [] [] schema) {:foo 1 :bar 2 :other 3}))))
+      (is (thrown? ExceptionInfo ((conjure/body-fn [] [] ::schema) {:not :foo}))))
     (testing "does not include url params in body"
-      (is (= {:foo 1} ((conjure/body-fn ["hello" :bar] [] schema) {:foo 1 :bar 2}))))
+      (is (= {:foo 1} ((conjure/body-fn ["hello" :bar] [] ::schema) {:foo 1 :bar 2}))))
     (testing "does not include query params in body"
-      (is (= {:foo 1} ((conjure/body-fn [] ["hello" :bar] schema) {:foo 1 :bar 2}))))))
+      (is (= {:foo 1} ((conjure/body-fn [] ["hello" :bar] ::schema) {:foo 1 :bar 2}))))))
 
 (def client (conjure/client api/test-spellbook :test))
 (def client-with-version (conjure/client api/test-spellbook :test
@@ -133,31 +134,3 @@
                                                    "path")]
       (is (= "path" (do-call ((conjure/inject-token token client) :endpoint6 :x 1))))))))
 
-(deftest test-pagination-single
-  (let [client (conjure/client api/test-spellbook :resource)
-        values [{:id 1 :msg "hi"} {:id 2 :msg "there"}]]
-    (testing "single page"
-      (async done
-             (go
-               (is (= values
-                      (with-redefs [http/get (fn [_ _] (go {:success true :body {:values values :next nil}}))]
-                        (<! (conjure/extract-pages (client :get-all))))))
-               (is (= values
-                      (with-redefs [http/get (fn [path opts] (let [page (js/parseInt (last (re-find #"page=(.+)" path)))]
-                                                               (go {:success (zero? page) :body {:values values
-                                                                                                 :next nil}})))]
-                        (<! (conjure/extract-pages (client :get-all :page "0"))))))
-                 (done))))))
-
-(deftest test-pagination-multiple
-  (let [client (conjure/client api/test-spellbook :resource)
-        values [{:id 1 :msg "hi"} {:id 2 :msg "there"}]]
-    (testing "multiple pages"
-      (async done
-             (go
-               (is (= (concat values values)
-                      (with-redefs [http/get (fn [path opts]
-                                               (let [page (js/parseInt (last (re-find #"page=(.+)" path)))]
-                                                 (go {:success true :body {:values values :next (if (zero? page) "1" nil)}})))]
-                        (<! (conjure/extract-pages (client :get-all :page "0"))))))
-                 (done))))))

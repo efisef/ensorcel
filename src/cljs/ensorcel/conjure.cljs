@@ -2,9 +2,9 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
+            [cljs.spec.alpha :as s :include-macros true]
             [clojure.string :as string]
-            [schema.core :as s]
-            [schema.coerce :as c]
+            [ensorcel.types :as types]
             [ensorcel.spellbook :refer [validate!] :as sb]))
 
 (defn assemble-call
@@ -55,15 +55,15 @@
     (if-not args
       (constantly nil)
       (fn [body]
-        (if-let [err (s/check args body)]
-            (throw (ex-info "Params do not conform to schema" {:schema args :params body :err err}))
+        (if (s/invalid? (s/conform args body))
+            (throw (ex-info "Spec check failed" (s/explain-data args body)))
             (apply dissoc body (concat path-args query-args)))))))
 
 (defn endpoint
   [base-url {:keys [path method args query returns] :as spec}]
-  {:schema returns
+  {:spec returns
    :call (assemble-call
-           (path-fn base-url (sb/correct-path path) query args)
+           (path-fn base-url (sb/correct-path path) query)
            (body-fn path query args)
            method)})
 
@@ -80,11 +80,11 @@
 (defn wrap
   [endpoints]
   (fn [endpoint & args]
-    (let [{:keys [call schema] :as e} (endpoints endpoint)
+    (let [{:keys [call spec] :as e} (endpoints endpoint)
           args (when (seq args) (apply hash-map args))]
       (when-not e
         (throw (ex-info "Endpoint does not exist in service" {:endpoint endpoint})))
-      {:schema schema
+      {:spec spec
        :args args
        :call-fn call
        :endpoint endpoint})))
@@ -112,48 +112,14 @@
     (let [construct (apply client endpoint args)]
       (update construct :headers assoc "Authorization" (str "Token " token)))))
 
-(def coercions
- {s/Keyword keyword
-  s/Bool #(= "true" (string/lower-case %))
-  s/Int #(js/parseInt %)})
-
-(defn parse
-  [schema result]
-  ((or (coercions schema) identity) result))
-
-(defn coerce
-  [schema result]
-  (if (coll? result)
-    (let [coercer (c/coercer schema c/json-coercion-matcher)]
-      (cond-> result
-        (some? schema) coercer))
-    (parse schema result)))
-
 (defn extract
-  [schema thens response]
+  [spec thens response]
   (if (:success response)
-    (reduce (fn [acc f] (f acc)) (coerce schema (:body response)) thens)
+    (reduce (fn [acc f] (f acc)) (types/coerce-json spec (:body response)) thens)
     (throw (ex-info "Uncaught exception in call" response))))
 
 (defn call->
   "Calls the endpoint, and if the response is successful, passes the parsed
   response through to the supplied functions one after the other"
-  [{call-fn :call-fn args :args headers :headers schema :schema} & thens]
-  (go (extract schema thens (<! (call-fn args headers)))))
-
-(defn extract-pages
-  [{:keys [endpoint call-fn args schema headers] :as dispatch}]
-  (go (let [response (<! (call-fn args headers))]
-        (if (:success response)
-          (let [{:keys [values next]} (coerce schema (:body response))]
-            (if next
-              (concat values (<! (extract-pages (update dispatch :args assoc :page next))))
-              values))
-          (throw (ex-info "Uncaught exception in call" response))))))
-
-(defn call-paginated->
-  "Same as call, except provides the resulting paginated response as a
-  lazy sequence that consumes the rest of the sequence on demand."
-  [dispatch & thens]
-  (go (let [lazy-vals (<! (extract-pages dispatch))]
-        (reduce (fn [acc f] (f acc)) lazy-vals thens))))
+  [{call-fn :call-fn args :args headers :headers spec :spec} & thens]
+  (go (extract spec thens (<! (call-fn args headers)))))

@@ -25,3 +25,4 @@ pom.xml
 .repl
 .rebel_readline_history
 /resources/private
+example/target

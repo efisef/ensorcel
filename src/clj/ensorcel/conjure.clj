@@ -2,63 +2,42 @@
   (:require [bidi.ring :refer [make-handler]]
             [clojure.data.json :as json]
             [clojure.string :as string]
+            [clojure.spec.alpha :as s]
+            [spec-tools.core :as st]
             [org.httpkit.server :as server]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.http-response :refer [wrap-http-response]]
             [ring.middleware.json :refer [wrap-json-params wrap-json-body wrap-json-response]]
             [ring.util.http-response :refer [ok bad-request! internal-server-error! method-not-allowed!]]
             [ring.util.response :as response]
-            [schema.core :as s]
-            [schema.coerce :as c]
+            [ensorcel.types :as types]
             [ensorcel.spellbook :refer [validate!] :as sb]))
 
-; ------------------------------ BIDI ROUTE CONSTRUCTION ----------------------
+;; -- BIDI ROUTE CONSTRUCTION -------------------------------------------------
 
 (defn validate
   "Validates that a received payload matches the expected schema.
   Raises <raise!> if not."
   [received expected raise!]
-  (when (and expected (s/check expected received))
+  (when (and expected (s/invalid? (s/conform expected received)))
     (raise! {:received (pr-str received)
-             :check (pr-str (s/check expected received))}))
-  received)
+             :check (s/explain-str expected received)}))
+  (if expected
+    (st/decode expected received st/strip-extra-keys-transformer)
+    received))
 
 (defn arg-count [f]
   "Calculates the argument count to <f> by using reflection."
   {:pre [(instance? clojure.lang.AFunction f)]}
   (-> f class .getDeclaredMethods first .getParameterTypes alength))
 
-(def coercions
- {clojure.lang.Keyword keyword
-  s/Keyword keyword
-  s/Bool #(= "true" (string/lower-case %))
-  s/Int #(Integer/parseInt %)
-  Long #(Long/parseLong %)
-  Double #(Double/parseDouble %)
-  Float #(Float/parseFloat %)})
-
-(defn coerce
-  [value spec]
-  ((or (coercions spec) identity) value))
-
-(defn parse-params
-  [params input-spec]
-  (if (seq input-spec)
-    (into {}
-          (for [[k v] params]
-            [k (coerce v (or (input-spec k) (input-spec (s/optional-key k))))]))
-    params))
-
 (defn construct-input
   "Given a request and an input spec, coerces the components to the correct types
   and then validates that everything looks as expected."
   [{:keys [params body]} input-spec]
-  (let [parsed-params (parse-params params input-spec)
-        input (merge parsed-params body)
-        coercer (if (seq input-spec)
-                  (c/coercer input-spec c/json-coercion-matcher)
-                  identity)]
-    (validate (coercer input) input-spec bad-request!)))
+  (let [coerced-input (cond->> (merge params body)
+                        input-spec (types/coerce-json input-spec))]
+    (validate coerced-input input-spec bad-request!)))
 
 (defn stringify
   [x]
@@ -137,7 +116,7 @@
         endpoints (map method-dispatch (group-by :path (concat options endpoints)))]
     {(str path "/") endpoints}))
 
-; ------------------------------- DEFAULT ENDPOINTS -------------------------
+;; -- DEFAULT ENDPOINTS -------------------------------------------------------
 
 (defn ping-service
   "ping ping ping ping"
@@ -151,7 +130,7 @@
   (service sb/default-spellbook :version
            :version (fn [] version)))
 
-; ------------------------------ APP ----------------------------------------
+;; -- APP ---------------------------------------------------------------------
 
 (defn root
   [{version :version} {:keys [include-version?]} services]
@@ -170,7 +149,7 @@
         routes (root spellbook opts full-services)]
     (-> (make-handler routes)
         wrap-http-response
-        (wrap-json-body {:keywords? true :bigdecimals? true})
+        (wrap-json-body {:keywords? true})
         wrap-json-response
         (wrap-defaults (assoc api-defaults
                               :params {:keywordize true

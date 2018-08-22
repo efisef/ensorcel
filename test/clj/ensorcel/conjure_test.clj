@@ -1,181 +1,188 @@
 (ns ensorcel.conjure-test
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
+            [clojure.spec.alpha :as s]
             [ensorcel.conjure :as c]
+            [ensorcel.types :as t]
             [ensorcel.api.test :as api]
             [org.httpkit.client :as http]
             [org.httpkit.server :refer [run-server]]
-            [ring.util.http-predicates :refer [success?]]
-            [schema.core :as s]))
+            [ring.util.http-predicates :refer [success?]]))
 
-; ----------------------------- UNIT TESTS ----------------------------------------
+; -- SETUP --------------------------------------------------------------------
 
-(deftest test-arg-count
-  (is (= 2 (c/arg-count #(str %1 %2))))
-  (is (= 1 (c/arg-count #(str %)))))
+(def stub-widget
+  {:id 0
+   :msg "hello"
+   :secret :a-secret
+   :num 42.0})
 
-(deftest test-wrap-endpoint
-  (testing "zero arg endpoint"
-    (let [called? (atom :unchanged)
-          wrapped (c/wrap-endpoint {} (fn [] (reset! called? :changed)))]
-      (wrapped {})
-      (is (= :changed @called?))))
+(defn- new-widget
+  [{:keys [msg secret num] :as args}]
+  (assert (empty? (dissoc args :id :msg :secret :num)))
+  (if num
+    (do
+      (assert (double? num))
+      (merge stub-widget (assoc args :id 0)))
+    stub-widget))
 
-  (testing "one arg endpoint"
-    (let [called? (atom :unchanged)
-          url-params {:one :two}
-          body-params {:three :four}
-          wrapped (c/wrap-endpoint {} (fn [params]
-                                        (assert (= (merge url-params body-params) params))
-                                        (reset! called? :changed)))]
-      (wrapped {:params url-params :body body-params})
-      (is (= :changed @called?))))
-
-  (testing "two arg endpoint"
-    (let [called? (atom :unchanged)
-          url-params {:one :two}
-          body-params {:three :four}
-          provided-opts {:cookies :mm-cookies}
-          req (merge provided-opts {:params url-params :body body-params})
-          wrapped (c/wrap-endpoint {} (fn [params opts]
-                                      (assert (= (merge url-params body-params) params))
-                                      (assert (= opts req))
-                                      (reset! called? :changed)))]
-      (wrapped req)
-      (is (= :changed @called?))))
-
-  (testing "throws on bad input"
-    (let [wrapped (c/wrap-endpoint {:args {:foo s/Str}}
-                                 (fn [params] (throw (ex-info "I shouldn't get here" {}))))]
-      (is (thrown-with-msg? RuntimeException #"HTTP 400" (wrapped {:body {:bar "hello"}})))))
-
-  (testing "throws on bad output"
-    (let [wrapped (c/wrap-endpoint {:returns s/Str}
-                                 (fn [params] 42))]
-      (is (thrown-with-msg? RuntimeException #"HTTP 500" (wrapped {})))))
-
-  (testing "properly coerces params to provided schema"
-    (let [wrapped (c/wrap-endpoint
-                    {:args {:it s/Int}}
-                    (fn [params] (assert (= 42 (:it params)))))]
-      (wrapped {:params {:it "42"}}))))
-
-; ----------------------------- ETE TEST ------------------------------------------
-
-(def endpoint1-result "hello-world")
-
-(defn endpoint1
+(defn- get-all-widgets
   []
-  endpoint1-result)
+  [stub-widget])
 
-(def endpoint2-result 42)
+(defn- get-widget
+  [{id :id :as args}]
+  (assert (= 1 (count args)))
+  (assert (integer? id))
+  stub-widget)
 
-(defn endpoint2
-  [{x :operand}]
-  (inc x))
+(defn- times-2-widget
+  [{id :id :as args} req]
+  (assert (every? (set (keys req)) [:headers :cookies :params :server-name])) ; etc
+  (* 2 42.1))
 
-(def endpoint3-result "thisthat")
-
-(defn endpoint3
-  [{this :thing that :thang}]
-  (str this that))
-
-(def endpoint4-result
-  {:foo 1
-   :bar 42})
-
-(defn endpoint4
-  [{:keys [amount key map]}]
-  (update map key (partial + amount)))
-
-(def endpoint5-result "hello")
-(defn endpoint5
+(defn- custom-stuff
   []
-  endpoint5-result)
+  "/custom")
 
-(def endpoint6-result 42)
-(defn endpoint6
-  [{x :x}]
-  (inc x))
+(def widget-service
+  (c/service api/spellbook :widget
+             :new     new-widget
+             :get-all get-all-widgets
+             :get     get-widget
+             :times-2 times-2-widget
+             :custom-stuff custom-stuff))
+
+(def custom-service
+  (c/service api/spellbook :custom
+             :custom-stuff custom-stuff))
+
+(def app
+  (c/app api/spellbook {}
+         widget-service
+         custom-service))
+
+(def app-with-version
+  (c/app api/spellbook {:include-version? true} widget-service))
+
+; -- TEST FUNCTIONS -----------------------------------------------------------
+
+(defn extract-body
+  [{:keys [status headers body error] :as resp}]
+  (if (or error (not (success? resp)))
+    (throw (ex-info (str "HTTP " status ": " resp) {}))
+    (do
+      (cond-> body
+        (re-find #"octet" (headers :content-type)) slurp
+        (re-find #"json"  (headers :content-type)) json/read-str))))
+
+(defn extract-headers
+  [{:keys [status headers error] :as resp}]
+  (if (or error (not (success? resp)))
+    (throw (ex-info (str "HTTP " status) resp))
+    headers))
 
 (defn path
   [path]
   (str "http://localhost:8088/api/" path))
 
-(defn extract
-  [{:keys [status headers body error] :as resp}]
-  (if (or error (not (success? resp)))
-    (throw (ex-info (str "Something went wrong: " body) resp))
-    (do
-      (cond-> body
-        (re-find #"octet" (headers :content-type)) slurp))))
+(defn body
+  ([x] (body {} x))
+  ([contents x]
+   (-> contents
+       (update :headers assoc "content-type" "application/json")
+       (assoc  :body (json/write-str x)))))
 
-(def test-service
-  (c/service api/test-spellbook :test
-                    :endpoint1 endpoint1
-                    :endpoint2 endpoint2
-                    :endpoint3 endpoint3
-                    :endpoint4 endpoint4
-                    :endpoint5 endpoint5
-                    :endpoint6 endpoint6))
+(defn jsonify
+  [x]
+  (json/read-str (json/write-str x)))
 
-(def test-app
-  (c/app api/test-spellbook {} test-service))
+(defmacro test-app
+  [app & body]
+  `(let [kill!# (run-server ~app {:port 8088})]
+     (try
+       ~@body
+       (finally (kill!#)))))
 
-(def test-app-with-version
-  (c/app api/test-spellbook {:include-version? true} test-service))
+; -- TESTS --------------------------------------------------------------------
 
 (deftest test-with-version
-  (let [kill! (run-server test-app-with-version {:port 8088})]
-    (Thread/sleep 1000)
+  (test-app app-with-version
+    (testing "adds version string into URL"
+      (is (= "pong" (extract-body @(http/get (path (str api/test-version "/ping/")))))))))
 
-    (try
-      (testing "Adds version string into URL"
-        (= "pong" @(http/get (path (str api/test-version "/ping/")))))
-      (finally (kill!)))))
+(deftest test-validation
+  (testing "validates spellbook"
+    (is (thrown-with-msg? RuntimeException
+                          #"Spellbook failed validation"
+                          (c/app {} widget-service))))
+  (testing "throws if service doesn't exist"
+    (is (thrown-with-msg? RuntimeException
+                          #"Service does not exist in spellbook"
+                          (c/service api/spellbook :foo))))
+  (testing "throws if endpoint impl. missing"
+    (is (thrown-with-msg? RuntimeException
+                          #"Spec only partially defined"
+                          (c/service api/spellbook :widget)))))
 
-(deftest test-ete
-  (let [kill! (run-server test-app {:port 8088})]
-    (Thread/sleep 1000)
+(deftest test-default-endpoints
+  (test-app app
+    (testing "adds ping endpoint"
+      (is (= "pong" (extract-body @(http/get (path "ping/"))))))
+    (testing "adds version endpoint"
+      (is (= api/test-version (extract-body @(http/get (path "version/"))))))
+    (testing "adds options endpoints"
+      (let [headers (extract-headers @(http/options (path "ping/")))]
+        (is (= "OPTIONS,GET" (:allow headers)))))))
 
-    (testing "Simple get, no path"
-      (is (= endpoint1-result (extract @(http/get (path "test/"))))))
+(deftest test-endpoints-arguments
+  (test-app app
+    (testing "hit no arg endpoint"
+      (let [body (extract-body @(http/get (path "widget/")))]
+        (is (= (jsonify [stub-widget]) body))))
+    (testing "hit 1 arg endpoint"
+      (let [body (extract-body @(http/get (path "widget/1")))]
+        (is (= (jsonify stub-widget) body))))
+    (testing "hit 2 arg endpoint"
+      (let [body (extract-body @(http/get (path "widget/times-2/1")))]
+        (is (= "84.2" body))))
+    (testing "strips extra arguments"
+      (let [body (extract-body @(http/post (path "widget/")
+                                           (body {:msg "foo"
+                                                  :haahaha "this is here!"})))]
+        (is (= (jsonify stub-widget) body))))))
 
-    (testing "url params"
-      (is (= (str endpoint2-result) (extract @(http/post (path "test/plus1/41"))))))
+(deftest test-special-arguments
+  (test-app app
+    (testing "query params"
+      (let [expected {:msg "hello,world!"
+                      :num 41.0
+                      :id 0
+                      :secret :new-secret}
+            body (extract-body @(http/post (path "widget/?num=41.0&secret=new-secret")
+                                           (body expected)))]
+        (is (= (jsonify expected) body))))))
 
-    (testing "url and body params"
-      (is (= endpoint3-result (extract @(http/post (path "test/combine/this")
-                                                   {:headers {"content-type" "application/json"}
-                                                    :body (json/write-str {:thang "that"})})))))
+(deftest test-custom-options
+  (test-app app
+    (testing "custom response wrappers"
+      (let [resp @(http/post (path "custom/stuff"))
+            headers (extract-headers resp)]
+        (is (= "http://localhost:8088/custom" (headers :location)))))
+    (testing "custom headers"
+      (let [resp @(http/post (path "custom/stuff"))
+            headers (extract-headers resp)]
+        (is (= "custom" (headers :custom-header)))))))
 
-    (testing "complicated multi params"
-      (is (= (json/write-str endpoint4-result) (extract @(http/post (path "test/add/bar/41")
-                                                                    {:headers {"content-type" "application/json"}
-                                                                     :body (json/write-str {:map {:foo 1 :bar 1}})})))))
-    (testing "correct header type"
-      (is (re-find #"application/json" (-> @(http/post (path "test/add/bar/41")
-                                                       {:headers {"content-type" "application/json"}
-                                                        :body (json/write-str {:map {:foo 1 :bar 1}})})
-                                           :headers :content-type))))
+(deftest test-errors
+  (test-app app
+    (testing "bad request - missing args"
+      (let [resp @(http/post (path "widget/")
+                             (body {}))]
+        (is (= 400 (:status resp)))))
+    (testing "bad request - arg types"
+      (let [resp @(http/post (path "widget/")
+                             (body {:msg 3}))]
+        (is (= 400 (:status resp)))))))
 
-    (testing "options method added for all endpoints"
-      (is (= "OPTIONS,POST" (-> @(http/options (path "test/plus1/12"))
-                                           :headers :allow)))
-      (is (= "OPTIONS,GET,PUT" (-> @(http/options (path "test/path"))
-                                           :headers :allow))))
-    (testing "simple get with path"
-      (is (= endpoint5-result (extract @(http/get (path "test/path"))))))
 
-    (testing "simple put, same path as get"
-      (is (= (str endpoint6-result) (extract @(http/put (path "test/path")
-                                                        {:headers {"content-type" "application/json"}
-                                                         :body (json/write-str {:x 41})})))))
-
-    (testing "ping"
-      (is (= "pong" (extract @(http/get (path "ping/"))))))
-
-    (testing "version"
-      (is (= api/test-version (extract @(http/get (path "version/"))))))
-
-    (kill!)))
