@@ -45,6 +45,11 @@
   (let [leaf (last via)]
     (update-in x path (partial coerce leaf))))
 
+(defn- keywordise-keys
+  [m]
+  (into {}
+        (map (fn [[k v]] [(keyword k) (cond-> v (map? v) keywordise-keys)]) m)))
+
 (defn coerce-json
   "Coerces JSON map types into the types specified
   by a schema using ensorcel types.
@@ -52,5 +57,6 @@
     Keyword -> String
     Double -> Float"
   [spec json]
-  (let [problems (::s/problems (s/explain-data spec json))]
+  (let [json (keywordise-keys json)
+        problems (::s/problems (s/explain-data spec json))]
     (reduce fix-problem json problems)))

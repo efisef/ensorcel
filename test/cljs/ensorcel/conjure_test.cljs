@@ -69,22 +69,21 @@
     (is (= (str "http://localhost:8080/api/" expected) path))
     {:success true}))
 
-(defn expects-then-returns
-  [expects value]
+(defn body-check
+  [expected]
   (fn [path opts]
-    (when-let [path' (:path expects)]
-      (is (= path' path)))
-    (if-let [body (:body expects)]
-      (is (= body (:json-params opts)))
-      (is (nil? (:json-params opts))))
-    (if-let [headers (:headers expects)]
-      (is (= headers (:headers opts)))
-      (is (nil? (:headers opts))))
-    {:success true :body value}))
+    (is (= expected (:json-params opts)))
+    {:success true}))
+
+(defn headers-check
+  [expected]
+  (fn [path opts]
+    (is (= expected (:headers opts)))
+    {:success true}))
 
 (defn do-call
-  [{call-fn :call-fn args :args schema :schema headers :headers}]
-  (conjure/extract schema [] (call-fn args headers)))
+  [{call-fn :call-fn args :args spec :spec headers :headers}]
+  (conjure/extract spec [] (call-fn args headers)))
 
 (deftest test-version-client
   (testing "adds version to the ping url"
@@ -98,56 +97,40 @@
   (testing "embeds url params"
     (with-redefs [http/get (url-check "widget/1")]
       (do-call (client :get {:id 1}))))
-  (testing "adds query arguments"))
+  (testing "adds query arguments"
+    (with-redefs [http/post (url-check "widget/?num=42.1&secret=hello")]
+      (do-call (client :new {:num 42.1 :secret :hello :msg "message"})))))
 
 (deftest test-client-body
-  (testing "provides correct arguments in body")
-  (testing "separates query, url and body arguments"))
+  (testing "provides correct arguments in body"
+    (with-redefs [http/post (body-check {:msg "message"})]
+      (do-call (client :new {:num 42.1 :secret :hello :msg "message"})))))
 
 (deftest test-results
-  (testing "correctly coerces result types"))
+  (testing "correctly coerces result types"
+    (let [expected {:msg "hello"
+                    :num 42.1
+                    :secret :hello
+                    :id 0}]
+      (with-redefs [http/post (fn [path opts] {:success true :body (js->clj (clj->js expected))})]
+        (is (= expected (do-call (client :new {:msg "message"}))))))))
+
+(deftest schema-checking
+  (testing "throws if provided args are incorrect"
+    (is (thrown-with-msg? js/Error #"Spec check failed" (do-call (client :new {}))))))
 
 (deftest test-inject-token
-  (testing "injects token into headers")
-  )
+  (testing "injects token into headers"
+    (with-redefs [http/get (headers-check {"Authorization" "Token abc123"})]
+      (do-call ((conjure/inject-token "Token abc123" client) :get-all)))))
 
-;(deftest test-client
-;  (testing "validates spec"
-;    (is (thrown? ExceptionInfo (conjure/client bad-spellbook :service))))
-;  (testing "adds version method"
-;    (with-redefs [http/get (url-check "http://localhost:8080/api/version/")]
-;      (do-call (client :version))))
-;  (testing "adds ping method"
-;    (with-redefs [http/get (url-check "http://localhost:8080/api/ping/")]
-;      (do-call (client :ping))))
-;  (testing "endpoint1"
-;    (with-redefs [http/get (expects-then-returns nil "hello world!")]
-;      (is (= "hello world!" (do-call (client :endpoint1))))))
-;  (testing "endpoint2"
-;    (with-redefs [http/post (expects-then-returns {:path "http://localhost:8080/api/test/plus1/1"} 2)]
-;      (is (= 2 (do-call (client :endpoint2 :operand 1))))))
-;  (testing "endpoint3"
-;    (with-redefs [http/post (expects-then-returns {:path "http://localhost:8080/api/test/combine/thing"
-;                                                   :body {:thang "thang"}} "thingthang")]
-;      (is (= "thingthang" (do-call (client :endpoint3 :thing "thing" :thang "thang"))))))
-;  (testing "endpoint4"
-;    (with-redefs [http/post (expects-then-returns {:path "http://localhost:8080/api/test/add/foo/1"
-;                                                   :body {:map {:foo 1 :bar 2}}} {:foo 2 :bar 2})]
-;      (is (= {:foo 2 :bar 2} (do-call (client :endpoint4 :key :foo :amount 1 :map {:foo 1 :bar 2}))))))
-;  (testing "endpoint5"
-;    (with-redefs [http/get (expects-then-returns {:path "http://localhost:8080/api/test/path"}
-;                                                 "path")]
-;      (is (= "path" (do-call (client :endpoint5))))))
-;  (testing "endpoint6"
-;    (with-redefs [http/put (expects-then-returns {:path "http://localhost:8080/api/test/path"
-;                                                  :body {:x 1}}
-;                                                 "path")]
-;      (is (= "path" (do-call (client :endpoint6 :x 1))))))
-;  (testing "adding token"
-;    (let [token "abc123"]
-;     (with-redefs [http/put (expects-then-returns {:path "http://localhost:8080/api/test/path"
-;                                                   :body {:x 1}
-;                                                   :headers {"Authorization" (str "Token " token)}}
-;                                                   "path")]
-;      (is (= "path" (do-call ((conjure/inject-token token client) :endpoint6 :x 1))))))))
-;
+(deftest test-validation
+  (testing "validates spec"
+    (is (thrown? ExceptionInfo (conjure/client bad-spellbook :service))))
+  (testing "adds version method"
+    (with-redefs [http/get (url-check "version/")]
+      (do-call (client :version))))
+  (testing "adds ping method"
+    (with-redefs [http/get (url-check "ping/")]
+      (do-call (client :ping)))))
+

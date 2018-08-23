@@ -40,7 +40,7 @@
 
 (defn query-fn
   [query-args args]
-  (string/join "&" (map #(str (name %) "=" (args %)) (filter args query-args))))
+  (string/join "&" (map #(str (name %) "=" (clj->js (args %))) (filter args query-args))))
 
 (defn path-fn
   [base-path path query-args]
@@ -110,7 +110,7 @@
   [token client]
   (fn [endpoint & args]
     (let [construct (apply client endpoint args)]
-      (update construct :headers assoc "Authorization" (str "Token " token)))))
+      (update construct :headers assoc "Authorization" token))))
 
 (defn extract
   [spec thens response]
