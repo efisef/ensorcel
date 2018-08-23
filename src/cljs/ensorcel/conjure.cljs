@@ -79,9 +79,9 @@
 
 (defn wrap
   [endpoints]
-  (fn [endpoint & args]
+  (fn [endpoint args]
     (let [{:keys [call spec] :as e} (endpoints endpoint)
-          args (when (seq args) (apply hash-map args))]
+          args (or args {})]
       (when-not e
         (throw (ex-info "Endpoint does not exist in service" {:endpoint endpoint})))
       {:spec spec

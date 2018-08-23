@@ -30,7 +30,11 @@
   :jvm-opts ["--add-modules" "java.xml.bind"]
 
   :cljsbuild {:builds
-              [{:id "test"
+              [{:id "dev"
+                :source-paths ["src/cljc" "src/cljs"]
+                :compiler {:output-to "resources/private/js/ensorcel.js"
+                           :optimizations :none}}
+               {:id "test"
                 :source-paths ["src/cljc" "src/cljs" "test/cljs" "test/cljc"]
                 :compiler {:output-to "resources/private/js/unit-test.js"
                            :main ensorcel.runner

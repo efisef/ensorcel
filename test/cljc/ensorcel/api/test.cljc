@@ -1,8 +1,10 @@
 (ns ensorcel.api.test
   #?(:cljs (:require [cljs.spec.alpha :as s
                       :include-macros true]
-                     [ensorcel.types :as t])
+                     [spec-tools.core :as st]
+                     [ensorcel.types :as t :include-macros true])
      :clj  (:require [clojure.spec.alpha :as s]
+                     [spec-tools.core :as st]
                      [ring.util.http-response :refer [created]]
                      [ensorcel.types :as t])))
 
@@ -22,15 +24,15 @@
                    :widget/num]))
 
 (s/def ::new-widget-request
-  (t/only-keys :req-un [:widget/msg]
-               :opt-un [:widget/secret
-                        :widget/num]))
+  (st/spec (s/keys :req-un [:widget/msg]
+                   :opt-un [:widget/secret
+                            :widget/num])))
 
 (s/def ::get-widget-request
-  (t/only-keys :req-un [:widget/id]))
+  (st/spec (s/keys :req-un [:widget/id])))
 
 (s/def ::times-2-request
-  (t/only-keys :req-un [:widget/id]))
+  (st/spec (s/keys :req-un [:widget/id])))
 
 (def spellbook
   {:version test-version

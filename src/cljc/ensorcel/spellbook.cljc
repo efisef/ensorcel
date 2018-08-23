@@ -41,7 +41,8 @@
   (s/map-of string? string?))
 
 (s/def ::response
-  some?)
+  #?(:cljs (constantly true)
+     :clj  some?))
 
 (s/def ::returns
   ::spec)
