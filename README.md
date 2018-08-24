@@ -116,6 +116,91 @@ Finally, in our frontend Clojurescript..
         println)
 ```
 
+## Other API Features
+
+Ensorcel is also easy to customise through your API specification:
+
+#### Query Arguments
+
+In your API definition:
+
+```clojure
+...
+
+(s/def ::my-query-argument ::types/string)
+(s/def ::do-thing-request
+  (st/spec (s/keys :opt-un [::my-query-argument])))
+
+...
+  ; in your spellbook
+  :do-thing {:path   "thing"
+             :method :GET
+             :query  [:my-query-argument]
+             :args   ::do-thing-request}
+```
+
+Now if we provide the optional `query-argument` parameter in our client call,
+it will be added as a query argument to our URL. The backend is unaffected.
+
+```clojure
+(call-> (client :do-thing)) ; becomes <path>/thing
+(call-> (client :do-thing {:my-query-argument "hi")) ; becomes <path>/thing?my-query-argument=hi
+```
+
+#### Custom Headers
+
+You can attach custom headers to your responses:
+
+```clojure
+...
+  ; in your spellbook
+  :my-endpoint {:path "endpoint"
+                :method :GET
+                :headers {"Content-Type" "text/html"}
+                ...
+               }
+```
+
+This will replace the `Content-Type` header (which defaults to `application/json`)
+with `text/html`.
+
+#### Custom Responses
+
+Normal successful responses will return `200 Success`. You can customise this
+(for example when `POST`ing a new resource):
+
+```clojure
+...
+  (:require [ring.util.http-response :refer [created]] ;using http-response for example
+    ...
+...
+  ; in your spellbook
+  :new {:path "new-thing"
+        :method :POST
+        :response created
+        ...
+        }
+```
+
+#### Accessing The Request
+
+Backend function definitions can have zero to two arguments.
+
+```clojure
+(defn endpoint-zero
+  [] ; no arguments
+  ...)
+
+(defn endpoint-one
+  [args] ; argument map will be provided
+  ...)
+
+(defn endpoint-two
+  [args request] ; the full ring request will also be provided
+  ...)           ; containing cookies, headers etc.
+
+```
+
 ## Why Use Ensorcel
 
 - Automatic spec checks on inputs and outputs
