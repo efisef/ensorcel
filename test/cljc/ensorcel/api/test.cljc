@@ -58,5 +58,5 @@
                        :endpoints {:custom-stuff {:path "stuff"
                                                   :method :POST
                                                   :headers {"Custom-Header" "custom"}
-                                                  :response created
+                                                  :response #?(:clj created :cljs nil)
                                                   :returns ::location}}}}})

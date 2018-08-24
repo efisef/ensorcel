@@ -1,4 +1,4 @@
-(defproject efisef/ensorcel "0.2.5-1"
+(defproject efisef/ensorcel "0.3.0"
   :description "Easier client / server interactions for Clojure[script]"
   :url "https://github.com/efisef/ensorcel"
   :license {:name "Eclipse Public License"
@@ -13,9 +13,7 @@
                  [ring/ring-defaults "0.3.2"]
                  [ring/ring-json "0.4.0"]
                  [ring-cors "0.1.12"]
-                 [com.taoensso/carmine "2.18.1"]
 
-                 [binaryage/devtools "0.9.4"]
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [cljs-http "0.1.45"]]
