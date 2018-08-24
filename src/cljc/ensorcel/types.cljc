@@ -57,6 +57,6 @@
     Keyword -> String
     Double -> Float"
   [spec json]
-  (let [json (keywordise-keys json)
+  (let [json (cond-> json (map? json) keywordise-keys)
         problems (::s/problems (s/explain-data spec json))]
     (reduce fix-problem json problems)))
