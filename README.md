@@ -208,6 +208,20 @@ Backend function definitions can have zero to two arguments.
 - API definition as data, easy to see and track changes
 - Dead simple to set up and get started!
 
+## Limitations
+
+Ensorcel is currently a work in progress, and as such has not yet been tested in production.
+Examples of things that I haven't tried yet:
+
+- HTTPS support
+- Working with NGINX etc.
+- Probably a myriad of other things
+
+However, Ensorcel uses a _minimal amount of magic_, so it should be trivial to extend in
+the standard ways.
+
+Please feel free to submit FRs, PRs and comments!
+
 ## License
 
 Copyright © 2018 efisef
