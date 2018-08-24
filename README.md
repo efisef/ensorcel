@@ -9,117 +9,119 @@ APIs as _data_.
 ## Importing
 
 ```clojure
-(:require [ensorcel.conjure :as conjure]) ; same for cljs and clj
+(:require [ensorcel.conjure :as conjure])
 ```
 
-## Usage
+## Getting Started
 
-Easiest place to start is to look at the `example` package in `clj`, `cljs` and `cljc`. This should have more or less
-everything that you need to get started.
+Ensorcel is easy to get starting with - there are 3 steps:
 
-### Some more detail
+### Define Your API
 
-First, define your API either as an `edn` file or in a `cljc` file.
+Let's define a widget retrieval service that has a get and get-all method..
 
 ```clojure
+; example/api.cljc
+
+(ns example.api
+  (:require [ensorcel.types :as t]
+            [spec-tools.core :as st]
+            #?(:clj  [clojure.spec.alpha :as s]
+               :cljs [cljs.spec.alpha :as s :include-macros true])))
+
+(s/def :widget/id  ::t/integer)
+(s/def :widget/msg ::t/string)
+
+; we wrap our key specs into spec-tools so that we can strip
+; any extra keys
+(s/def ::widget
+  (st/spec (s/keys :req-un [:widget/id :widget/msg])))
+
+(s/def ::get-widget-request
+  (st/spec (s/keys :req-un [:widget/id])))
+
 (def spellbook
   {:version "1"
-   :services {:service1 {:path "service1"
-                         :endpoints {:endpoint1 {:path "endpoint1"
-                                                 :method :GET
-                                                 :returns s/Str}}}
-              :service2 {:path "service2"
-                         :endpoints {:endpoint2 {:path "endpoint2"
-                                                 :method :POST
-                                                 :args {:some-value s/Int}
-                                                 :returns [s/Int]}
-                                     :endpoint3 {:path ["endpoint3" :val]
-                                                 :args {:val s/Str}
-                                                 :method :DELETE}
-                                     :endpoint4 {:path ["endpoint4" :thing]
-                                                 :args {:thing s/Int :other-thing-in-body {s/Keyword s/Str}}
-                                                 :method :POST}}}}})
+   :services {:widgets {:path "widgets"
+                        :endpoints {:get-all {:path ""
+                                              :method :GET
+                                              :returns (s/* ::widget)}
+                                    :get     {:path [:id]
+                                              :method :GET
+                                              :args ::get-widget-request
+                                              :returns ::widget}}}}})
 ```
 
-APIs are built of `services` and `endpoints`.
+A spellbook defines one or more services, each of which has one or more endpoints.
+In the example above, we define two endpoints located under `<addr>:<port>/api/widgets/`,
+one at `widgets/` and one at `widgets/<id>`.
 
-Conceptually, a `service` is a logical unit of functionality, such as `users` or `expenses`.
-`endpoints` are the individual functions within a `service`, such as `getUsers` or `putUser`.
+### Define Your Server
 
-A `service` consists of a `<path>` and `<endpoints>`. The `<path>` can be any valid substring
-of a URL.
-
-An `endpoint` consists of a `<path>` (as above), a `<method>` (`:GET :POST :PUT :DELETE`), and
-optionally `<args>` (the input), `<returns>` (the output) and `<response>` (for the http response).
-
-`<args>` and `<returns>` should be schemas (https://github.com/plumatic/schema), which will be run through validation. If they
-are not provided, no checks will happen.
-
-You can also specify inputs as part of the `<path>` by specifying it as a vector, eg.
+Next up, we define our backend:
 
 ```clojure
-:path [:my-var "endpoint"]
+; example/server.clj
+
+(ns example.server
+  (:require [example.api :as api]
+            [ensorcel.conjure :as conjure]
+            [org.httpkit.server :refer [run-server]]))
+
+...
+
+(defn- get-all-widgets
+  []
+  [{:id 0 :msg "I am a widget!"}
+   {:id 1 :msg "I am another widget!"}])
+
+(defn- get-widget
+  [{id :id}]
+  [{:id id :msg "I'm probably not what you wanted.."}])
+
+; create our service
+(def widget-service
+  (conjure/service api/spellbook :widgets
+                   :get     get-widget
+                   :get-all get-all-widgets))
+
+; tie it all together into our app
+(def app
+  (conjure/app api/spellbook {} ; options go here
+               widget-service))
+
+(defn start-server
+  []
+  (run-server app {:port 8000}))
 ```
 
-This will resolve URLs like `thing/endpoint` (`my-var = "thing"`).
+### Define Your Client
 
-`:my-var` should be included as a key in your `<args>` and will be provided to your function.
-
-### Server
-
-You can instantiate your server by providing binding for each endpoint, creating a service
-and then combining these into an app. For example, for the above spec we could do the following
-for `service2`:
+Finally, in our frontend Clojurescript..
 
 ```clojure
-(defn e2
-  [params] ; params is a map of all keys specified in the :params key
-  ["hello" "world"])
+; example/client.cljs
 
-(defn e3
-  [params]
-  (do-nothing))
+(ns example.client
+  (:require [example.api :as api]
+            [ensorcel.conjure :as conjure :refer [call->]]))
 
-(defn e4
-  [params]
-  (do-nothing))
+(def client (conjure/client api/spellbook :widgets))
 
-(def service2 (c/service spellbook :service2
-                         :endpoint2 e2
-                         :endpoint3 e3
-                         :endpoint4 e4))
+(call-> (client :get-all)
+        println)          ; the extracted, properly typed list of
+                          ; widgets is passed to `println`
+
+(call-> (client :get {:id 0})
+        println)
 ```
 
-`service2` is now a `bidi` sub definition (https://github.com/juxt/bidi).
+## Why Use Ensorcel
 
-You can turn it into a full app definition by combining your services as follows:
-
-```clojure
-(def my-app (s/app spellbook service1 service2))
-```
-
-This app is a fully wrapped ring handler that you can pass to (for example) `http-kit` or some
-other hosting function.
-
-### Client
-
-The client is fully defined within `ensorcel.conjure`. You can make a client for your service
-by doing the following:
-
-`(def service2-client (conjure/client spellbook :service2))`
-
-This will give you a fully functioning client that will validate inputs and outputs for you. Eg.
-
-```clojure
-(call-> (service1-client :endpoint1))
-
-(call-> (service2-client :endpoint2 {:val my-val})) ; params are provided after the endpoint name
-
-(call-> (service2-client :endpoint3 {:val my-val}) ; there is no discrepancy between URL and
-        #(println %))                              ; body params - conjure handles it for you.
-```
-
-`call->` is the async function that lets you chain function calls together.
+- Automatic spec checks on inputs and outputs
+- Minimal fussing with infrastructure details
+- API definition as data, easy to see and track changes
+- Dead simple to set up and get started!
 
 ## License
 
