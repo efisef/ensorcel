@@ -6,6 +6,8 @@ APIs as _data_.
 [![Clojars](https://img.shields.io/clojars/v/efisef/ensorcel.svg)](https://clojars.org/efisef/ensorcel)
 [![CircleCI](https://circleci.com/gh/efisef/ensorcel.svg?style=svg)](https://circleci.com/gh/efisef/ensorcel)
 
+FRs, PRs and comments welcome!
+
 ## Importing
 
 ```clojure
