@@ -7,27 +7,34 @@
                      [spec-tools.core :as st]
                      [clojure.string :as string])))
 
+(s/def ::any     (constantly true))
 (s/def ::integer integer?)
-(s/def ::string string?)
-(s/def ::double #?(:clj double? :cljs float?))
-(s/def ::float float?)
+(s/def ::long    integer?)
+(s/def ::string  string?)
+(s/def ::double  #?(:clj double? :cljs float?))
+(s/def ::float   float?)
 (s/def ::boolean boolean?)
 (s/def ::keyword keyword?)
 
 (defn- parse-integer
   [int-str]
-  #? (:clj  (Integer/parseInt int-str)
-      :cljs (js/parseInt int-str)))
+  #?(:clj  (Integer/parseInt int-str)
+     :cljs (js/parseInt int-str)))
+
+(defn- parse-long
+  [long-str]
+  #?(:clj  (Long/parseLong long-str)
+     :cljs (js/parseInt long-str)))
 
 (defn- parse-double
   [double-str]
-  #? (:clj  (Double/parseDouble double-str)
-      :cljs (js/parseFloat double-str)))
+  #?(:clj  (Double/parseDouble double-str)
+     :cljs (js/parseFloat double-str)))
 
 (defn- parse-float
   [float-str]
-  #? (:clj  (Float/parseFloat float-str)
-      :cljs (js/parseFloat float-str)))
+  #?(:clj  (Float/parseFloat float-str)
+     :cljs (js/parseFloat float-str)))
 
 (defn- coerce
   [spec value]
@@ -35,6 +42,7 @@
     ::keyword keyword
     ::boolean #(= "true" (string/lower-case %))
     ::integer parse-integer
+    ::long    parse-long
     ::double  parse-double
     ::float   parse-float
     identity
