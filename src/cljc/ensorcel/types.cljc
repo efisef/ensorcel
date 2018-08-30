@@ -48,10 +48,34 @@
     identity
     ) value))
 
+(derive java.util.Map ::map)
+(derive java.util.List ::list)
+
+(defn- update-at
+  [xs i f]
+  (let [pre (take i xs)
+        x (get xs i)
+        post (drop (inc i) xs)]
+    (vec (concat pre [(f x)] post))))
+
+(defmulti update-in* (fn [x _ _] (class x)))
+
+(defmethod update-in* ::map [m p f]
+  (let [[p & ps] p]
+    (if (nil? ps)
+      (update m p f)
+      (update m p #(update-in* % ps f)))))
+
+(defmethod update-in* ::list [l p f]
+  (let [[p & ps] p]
+    (if (nil? ps)
+      (update-at l p f)
+      (update-at l p #(update-in* % ps f)))))
+
 (defn- fix-problem
-  [x {:keys [path via] :as problem}]
+  [x {:keys [in via] :as problem}]
   (let [leaf (last via)]
-    (update-in x path (partial coerce leaf))))
+    (update-in* x in (partial coerce leaf))))
 
 (defn- keywordise-keys
   [m]
