@@ -58,23 +58,25 @@
 (defn- class*
   [x]
   (cond (map? x)    ::map
-        (vector? x) ::vector))
+        (vector? x) ::list))
 
 (defmulti update-in* (fn [x _ _] (class* x)))
 
 (defmethod update-in* ::map [m p f]
+  (println "map" m p)
   (let [[p & ps] p]
     (if (nil? ps)
       (update m p f)
       (update m p #(update-in* % ps f)))))
 
 (defmethod update-in* ::list [l p f]
+  (println "list" l p)
   (let [[p & ps] p]
     (if (nil? ps)
       (update-at l p f)
       (update-at l p #(update-in* % ps f)))))
 
-(defmethod update-in* :default [x _ _] x)
+(defmethod update-in* :default [x _ _] (println "default" x) x)
 
 (defn- fix-problem
   [x {:keys [in via] :as problem}]
@@ -82,9 +84,11 @@
     (update-in* x in (partial coerce leaf))))
 
 (defn- keywordise-keys
-  [m]
-  (into {}
-        (map (fn [[k v]] [(keyword k) (cond-> v (map? v) keywordise-keys)]) m)))
+  [x]
+  (cond
+    (map? x)    (into {} (map (fn [[k v]] [(keyword k) (keywordise-keys v)]) x))
+    (vector? x) (mapv keywordise-keys x)
+    :else       x))
 
 (defn coerce-json
   "Coerces JSON map types into the types specified
@@ -93,6 +97,8 @@
     Keyword -> String
     Double -> Float"
   [spec json]
-  (let [json (cond-> json (map? json) keywordise-keys)
+  (let [json (keywordise-keys json)
         problems (::s/problems (s/explain-data spec json))]
+    (s/explain spec json)
+    (println problems)
     (reduce fix-problem json problems)))
