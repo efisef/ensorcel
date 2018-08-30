@@ -99,6 +99,4 @@
   [spec json]
   (let [json (keywordise-keys json)
         problems (::s/problems (s/explain-data spec json))]
-    (s/explain spec json)
-    (println problems)
     (reduce fix-problem json problems)))
