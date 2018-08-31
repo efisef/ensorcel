@@ -16,7 +16,8 @@
 
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
-                 [cljs-http "0.1.45"]]
+                 [cljs-http "0.1.45"]
+                 [re-frame "0.10.5"]]
 
   :source-paths ["src/clj"
                  "src/cljc"
