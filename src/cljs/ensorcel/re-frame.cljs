@@ -13,6 +13,6 @@
     (fn [{:keys [service endpoint args dispatch]}]
       (let [options (apply hash-map options)
             client (get-client spellbook service options)]
-        (call-> (client endpoint args)
-                #(doseq [event dispatch]
-                   (rf/dispatch [event %])))))))
+        (conjure/call-> (client endpoint args)
+                        #(doseq [event dispatch]
+                           (rf/dispatch [event %])))))))
