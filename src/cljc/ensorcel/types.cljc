@@ -36,7 +36,7 @@
   #?(:clj  (Float/parseFloat float-str)
      :cljs (js/parseFloat float-str)))
 
-(defn- coerce
+(defn- coerce-value
   [spec value]
   ((case spec
     ::keyword keyword
@@ -63,25 +63,23 @@
 (defmulti update-in* (fn [x _ _] (class* x)))
 
 (defmethod update-in* ::map [m p f]
-  (println "map" m p)
   (let [[p & ps] p]
     (if (nil? ps)
       (update m p f)
       (update m p #(update-in* % ps f)))))
 
 (defmethod update-in* ::list [l p f]
-  (println "list" l p)
   (let [[p & ps] p]
     (if (nil? ps)
       (update-at l p f)
       (update-at l p #(update-in* % ps f)))))
 
-(defmethod update-in* :default [x _ _] (println "default" x) x)
+(defmethod update-in* :default [x _ _] x)
 
 (defn- fix-problem
   [x {:keys [in via] :as problem}]
   (let [leaf (last via)]
-    (update-in* x in (partial coerce leaf))))
+    (update-in* x in (partial coerce-value leaf))))
 
 (defn- keywordise-keys
   [x]
@@ -90,13 +88,10 @@
     (vector? x) (mapv keywordise-keys x)
     :else       x))
 
-(defn coerce-json
-  "Coerces JSON map types into the types specified
-  by a schema using ensorcel types.
-  In general from Clojure -> JSON:
-    Keyword -> String
-    Double -> Float"
-  [spec json]
-  (let [json (keywordise-keys json)
-        problems (::s/problems (s/explain-data spec json))]
-    (reduce fix-problem json problems)))
+(defn coerce
+  "Coerces map types (containing potentially non-conforming types) into the types specified
+  by a schema using ensorcel types."
+  [spec args]
+  (let [args (keywordise-keys args)
+        problems (::s/problems (s/explain-data spec args))]
+    (reduce fix-problem args problems)))

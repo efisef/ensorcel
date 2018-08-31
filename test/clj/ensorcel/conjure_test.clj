@@ -1,7 +1,7 @@
 (ns ensorcel.conjure-test
   (:require [clojure.test :refer :all]
-            [clojure.data.json :as json]
             [clojure.spec.alpha :as s]
+            [clojure.edn :as edn]
             [ensorcel.conjure :as c]
             [ensorcel.types :as t]
             [ensorcel.api.test :as api]
@@ -67,6 +67,10 @@
 
 ; -- TEST FUNCTIONS -----------------------------------------------------------
 
+(defn read-edn
+  [body]
+  (edn/read-string (slurp body)))
+
 (defn extract-body
   [{:keys [status headers body error] :as resp}]
   (if (or error (not (success? resp)))
@@ -74,7 +78,7 @@
     (do
       (cond-> body
         (re-find #"octet" (headers :content-type)) slurp
-        (re-find #"json"  (headers :content-type)) json/read-str))))
+        (re-find #"edn"  (headers :content-type)) read-edn))))
 
 (defn extract-headers
   [{:keys [status headers error] :as resp}]
@@ -90,12 +94,8 @@
   ([x] (body {} x))
   ([contents x]
    (-> contents
-       (update :headers assoc "content-type" "application/json")
-       (assoc  :body (json/write-str x)))))
-
-(defn jsonify
-  [x]
-  (json/read-str (json/write-str x)))
+       (update :headers assoc "content-type" "application/edn")
+       (assoc  :body (pr-str x)))))
 
 (defmacro test-app
   [app & body]
@@ -139,10 +139,10 @@
   (test-app app
     (testing "hit no arg endpoint"
       (let [body (extract-body @(http/get (path "widget/")))]
-        (is (= (jsonify [stub-widget]) body))))
+        (is (= [stub-widget] body))))
     (testing "hit 1 arg endpoint"
       (let [body (extract-body @(http/get (path "widget/1")))]
-        (is (= (jsonify stub-widget) body))))
+        (is (= stub-widget body))))
     (testing "hit 2 arg endpoint"
       (let [body (extract-body @(http/get (path "widget/times-2/1")))]
         (is (= "84.2" body))))
@@ -150,7 +150,7 @@
       (let [body (extract-body @(http/post (path "widget/")
                                            (body {:msg "foo"
                                                   :haahaha "this is here!"})))]
-        (is (= (jsonify stub-widget) body))))))
+        (is (= stub-widget body))))))
 
 (deftest test-special-arguments
   (test-app app
@@ -161,7 +161,7 @@
                       :secret :new-secret}
             body (extract-body @(http/post (path "widget/?num=41.0&secret=new-secret")
                                            (body expected)))]
-        (is (= (jsonify expected) body))))))
+        (is (= expected body))))))
 
 (deftest test-custom-options
   (test-app app
