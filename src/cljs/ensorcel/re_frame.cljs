@@ -11,8 +11,7 @@
   (reg-fx
     :ensorcel
     (fn [{:keys [service endpoint args dispatch]}]
-      (let [options (apply hash-map options)
-            client (get-client spellbook service options)]
+      (let [client (get-client spellbook service options)]
         (conjure/call-> (client endpoint args)
                         #(doseq [event dispatch]
                            (rf/dispatch [event %])))))))
