@@ -11,6 +11,7 @@
             [ring.util.http-response :refer [ok bad-request! internal-server-error! method-not-allowed!]]
             [ring.util.response :as response]
             [ensorcel.ring :as ring]
+            [ensorcel.types :as types]
             [ensorcel.spellbook :refer [validate!] :as sb]))
 
 ;; -- BIDI ROUTE CONSTRUCTION -------------------------------------------------
