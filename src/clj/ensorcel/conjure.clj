@@ -1,5 +1,6 @@
 (ns ensorcel.conjure
   (:require [bidi.ring :refer [make-handler]]
+            [clojure.edn :as edn]
             [clojure.data.json :as json]
             [clojure.string :as string]
             [clojure.spec.alpha :as s]
@@ -7,9 +8,9 @@
             [org.httpkit.server :as server]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.http-response :refer [wrap-http-response]]
-            [ring.middleware.json :refer [wrap-json-params wrap-json-body wrap-json-response]]
             [ring.util.http-response :refer [ok bad-request! internal-server-error! method-not-allowed!]]
             [ring.util.response :as response]
+            [ensorcel.ring :as ring]
             [ensorcel.types :as types]
             [ensorcel.spellbook :refer [validate!] :as sb]))
 
@@ -36,7 +37,7 @@
   and then validates that everything looks as expected."
   [{:keys [params body]} input-spec]
   (let [coerced-input (cond->> (merge params body)
-                        input-spec (types/coerce-json input-spec))]
+                        input-spec (types/coerce input-spec))]
     (validate coerced-input input-spec bad-request!)))
 
 (defn stringify
@@ -149,8 +150,8 @@
         routes (root spellbook opts full-services)]
     (-> (make-handler routes)
         wrap-http-response
-        (wrap-json-body {:keywords? true})
-        wrap-json-response
+        ring/wrap-edn-body
+        ring/wrap-edn-response
         (wrap-defaults (assoc api-defaults
                               :params {:keywordize true
                                        :urlencoded true}

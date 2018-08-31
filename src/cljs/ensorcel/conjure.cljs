@@ -13,7 +13,7 @@
     (let [params (or params {})
           body (body-fn params)
           opts (cond-> {}
-                 (and (seq body) (map? body)) (assoc :json-params body)
+                 (and (seq body) (map? body)) (assoc :edn-params body)
                  (some? headers) (assoc :headers headers))]
       ((case method
         :GET http/get
@@ -115,7 +115,7 @@
 (defn extract
   [spec thens response]
   (if (:success response)
-    (reduce (fn [acc f] (f acc)) (types/coerce-json spec (:body response)) thens)
+    (reduce (fn [acc f] (f acc)) (types/coerce spec (:body response)) thens)
     (throw (ex-info "Uncaught exception in call" response))))
 
 (defn call->

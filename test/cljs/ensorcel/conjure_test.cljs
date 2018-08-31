@@ -72,7 +72,7 @@
 (defn body-check
   [expected]
   (fn [path opts]
-    (is (= expected (:json-params opts)))
+    (is (= expected (:edn-params opts)))
     {:success true}))
 
 (defn headers-check
