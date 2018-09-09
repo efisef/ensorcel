@@ -1,4 +1,4 @@
-(defproject efisef/ensorcel "0.3.1-2"
+(defproject efisef/ensorcel "0.3.1-6"
   :description "Easier client / server interactions for Clojure[script]"
   :url "https://github.com/efisef/ensorcel"
   :license {:name "Eclipse Public License"
@@ -16,7 +16,8 @@
 
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
-                 [cljs-http "0.1.45"]]
+                 [cljs-http "0.1.45"]
+                 [re-frame "0.10.5"]]
 
   :source-paths ["src/clj"
                  "src/cljc"
