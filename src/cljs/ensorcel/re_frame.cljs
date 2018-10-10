@@ -7,7 +7,7 @@
   (apply conjure/client spellbook service options))
 
 (defn reg-ensorcel-fx
-  [spellbook & {:as options}]
+  [spellbook & options]
   (reg-fx
     :ensorcel
     (fn [{:keys [service endpoint token args dispatch]}]
