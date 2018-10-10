@@ -91,13 +91,12 @@
 
 (defn client
   "Create a REST client for a particular service from a spellbook"
-  [{services :services :as spellbook} service-name & opts]
+  [{services :services :as spellbook} service-name & {:as opts}]
   (validate! spellbook)
   (when-not (services service-name)
     (throw (ex-info "Service does not exist in spellbook" {:service service-name
                                                            :listed-services (keys services)})))
-  (let [opts (apply hash-map opts)
-        {:keys [host port] :or {host "localhost" port 8080}} opts
+  (let [{:keys [host port] :or {host "localhost" port 8080}} opts
         {:keys [path endpoints] :as service} (services service-name)
         version-str (when (:include-version? opts) (str (:version spellbook) "/"))
         base-url (str "http://" host ":" port "/api/" version-str path)
