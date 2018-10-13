@@ -59,7 +59,7 @@
                 (= 1 num-args)    (f input)
                 :else             (f input req))
           (validate returns internal-server-error!)
-          (stringify response)
+          (stringify returns)
           response
           (update :headers merge headers)))))
 
