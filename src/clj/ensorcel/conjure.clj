@@ -41,8 +41,8 @@
     (validate coerced-input input-spec bad-request!)))
 
 (defn stringify
-  [x]
-  (cond-> x (not (coll? x)) str))
+  [response x]
+  (cond-> x (and (not (coll? x)) (not (= ::types/bytes response))) str))
 
 (defn wrap-endpoint
   "Wraps a given endpoint implementation in the gubbins for a ring request
@@ -59,7 +59,7 @@
                 (= 1 num-args)    (f input)
                 :else             (f input req))
           (validate returns internal-server-error!)
-          stringify
+          (stringify response)
           response
           (update :headers merge headers)))))
 
