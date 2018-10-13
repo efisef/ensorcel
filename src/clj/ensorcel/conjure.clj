@@ -42,7 +42,7 @@
 
 (defn stringify
   [response x]
-  (cond-> x (and (not (coll? x)) (not (= ::types/bytes response))) str))
+  (cond-> x (and (not (coll? x)) (not (= ::types/any response))) str))
 
 (defn wrap-endpoint
   "Wraps a given endpoint implementation in the gubbins for a ring request
