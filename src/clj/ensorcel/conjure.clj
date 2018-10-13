@@ -41,8 +41,8 @@
     (validate coerced-input input-spec bad-request!)))
 
 (defn stringify
-  [response x]
-  (cond-> x (and (not (coll? x)) (not (= ::types/any response))) str))
+  [x response-type]
+  (cond-> x (and (not (coll? x)) (not (= ::types/any response-type))) str))
 
 (defn wrap-endpoint
   "Wraps a given endpoint implementation in the gubbins for a ring request
