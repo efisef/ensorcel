@@ -7,7 +7,7 @@
   [response]
   (let [edn-resp (update response :body pr-str)]
     (if (contains? (:headers response) "Content-Type")
-      edn-resp
+      response
       (content-type edn-resp "application/edn; charset=utf-8"))))
 
 (defn wrap-edn-response
