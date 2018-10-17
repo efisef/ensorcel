@@ -44,6 +44,13 @@
   [x response-type]
   (cond-> x (and (not (coll? x)) (not (= ::types/any response-type))) str))
 
+(defn extract-dynamic-headers
+  [result]
+  (if (and (map? result) (::headers result))
+    {:dynamic-headers (::headers result)
+     :result (:result result)}
+    {:result result}))
+
 (defn wrap-endpoint
   "Wraps a given endpoint implementation in the gubbins for a ring request
   Different outcomes for different arity implementions:
@@ -54,14 +61,16 @@
   [{:keys [args returns response headers] :or {response ok}} f]
   (fn [req]
     (let [num-args (arg-count f)
-          input (construct-input req args)]
-      (-> (cond (zero? num-args)  (f)
-                (= 1 num-args)    (f input)
-                :else             (f input req))
+          input (construct-input req args)
+          result (cond (zero? num-args)  (f)
+                       (= 1 num-args)    (f input)
+                       :else             (f input req))
+          {:keys [dynamic-headers result]} (extract-dynamic-headers result)]
+      (-> result
           (validate returns internal-server-error!)
           (stringify returns)
           response
-          (update :headers merge headers)))))
+          (update :headers merge headers dynamic-headers)))))
 
 (defn correct-method
   "Makes a method keyword bidi-compliant"
